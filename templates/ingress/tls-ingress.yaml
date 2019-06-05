@@ -1,0 +1,23 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: _RESOURCE_NAME_
+  namespace: _NAMESPACE_
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    certmanager.k8s.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  tls:
+  - hosts:
+    - _DNS_NAME_
+    secretName: _RESOURCE_NAME_-tls-secret
+  rules:
+  - host: _DNS_NAME_
+    http:
+      paths:
+      - backend:
+          serviceName: _SERVICE_NAME_
+          servicePort: _SERVICE_PORT_
+        path: /(.*)

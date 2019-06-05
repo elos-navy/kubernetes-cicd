@@ -1,0 +1,32 @@
+### Pipeline settings
+PREFIX='cicd-'
+JENKINS_ADMIN_PASSWORD='admin'
+APPLICATION_GIT_URL='https://github.com/elos-tech/openshift-cicd-app.git'
+
+
+### ACR Registry
+# Must conform to the following pattern: '^[a-zA-Z0-9]*$'
+REGISTRY_NAME='elostestregistry'
+
+# Kubernetes secret name. This secret is used for ACR authentication.
+#
+# DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+REGISTRY_SECRET_NAME='acr-secret'
+
+
+### AKS cluster
+CLUSTER_NAME='ls-test-cluster'
+STORAGE_ACCOUNT_NAME='lsstorageaccount'
+LOCATION='westeurope'
+RESOURCE_GROUP='ls-test-rg'
+SHADOW_RESOURCE_GROUP="MC_${RESOURCE_GROUP}_${CLUSTER_NAME}_${LOCATION}"
+
+### Ingress
+INGRESS_NAMESPACE='ingress-system'
+CERT_MANAGER_NAMESPACE='cert-manager'
+INGRESS_DNS_NAME='cicd'
+
+# This should be filled when setting up routing on AKS. It's retrieved
+# via az cli command as only one DNS zone created by HTTP application
+# routing plugin.
+DNS_ZONE_NAME=''
