@@ -176,11 +176,11 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "fileUris": [
-                "[concat(variables('_artifactsLocation'), '/artefacts/', variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
+                "[concat(variables('_artifactsLocation'), variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
               ]
             },
             "protectedSettings": {
-              "commandToExecute": "[concat('./', variables('_extensionScript'), ' --app_id \"', parameters('servicePrincipalAppId'), '\" --app_key \"', parameters('servicePrincipalAppKey'), '\" --subscription_id \"', subscription().subscriptionId, '\" --tenant_id \"', subscription().tenantId, '\" --resource_group \"', resourceGroup().name, '\" --aks_name \"', variables('aksName'), '\" --auxvm_fqdn \"', reference(variables('publicIPAddressName')).dnsSettings.fqdn, '\" --artifacts_location \"', variables('_artifactsLocation'), '\" --sas_token \"', variables('_artifactsLocationSasToken'), '\" --jenkins_admin_password \"', parameters('jenkinsAdminPassword'), '\" --application_git_url \"', parameters('applicationGitUrl'), '\" --registry_name \"', variables('acrName'), '\" --location \"', parameters('location'), '\"')]"
+              "commandToExecute": "[concat('cd /root && git clone https://github.com/elos-tech/kubernetes-cicd.git && cd /root/kubernetes-cicd && ./scripts/', variables('_extensionScript'), ' --app_id \"', parameters('servicePrincipalAppId'), '\" --app_key \"', parameters('servicePrincipalAppKey'), '\" --subscription_id \"', subscription().subscriptionId, '\" --tenant_id \"', subscription().tenantId, '\" --resource_group \"', resourceGroup().name, '\" --aks_name \"', variables('aksName'), '\" --auxvm_fqdn \"', reference(variables('publicIPAddressName')).dnsSettings.fqdn, '\" --artifacts_location \"', variables('_artifactsLocation'), '\" --sas_token \"', variables('_artifactsLocationSasToken'), '\" --jenkins_admin_password \"', parameters('jenkinsAdminPassword'), '\" --application_git_url \"', parameters('applicationGitUrl'), '\" --registry_name \"', variables('acrName'), '\" --location \"', parameters('location'), '\"')]"
             }
           }
         }
