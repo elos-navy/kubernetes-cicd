@@ -280,12 +280,7 @@
       "properties": {
         "kubernetesVersion": "[parameters('kubernetesVersion')]",
         "dnsPrefix": "[variables('aksDnsPrefix')]",
-        "enableRBAC": true,
-        "addonProfiles": {
-          "httpApplicationRouting": {
-            "enabled": true
-          }
-        },
+        "enableRBAC": false,
         "agentPoolProfiles": [
           {
             "name": "agentpool",
@@ -348,23 +343,23 @@
       "type": "string"
     },
     "Jenkins url": {
-      "value": "[concat('https://jenkins.', reference(variables('aksId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName)]",
+      "value": "[concat('https://jenkins.')]",
       "type": "string"
     },
     "Sonarqube url": {
-      "value": "[concat('https://sonarqube.', reference(variables('aksId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName)]",
+      "value": "[concat('https://sonarqube.')]",
       "type": "string"
     },
     "Nexus url": {
-      "value": "[concat('https://nexus.', reference(variables('aksId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName)]",
+      "value": "[concat('https://nexus.')]",
       "type": "string"
     },
     "Application dev url": {
-      "value": "[concat('https://application-dev.', reference(variables('aksId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName)]",
+      "value": "[concat('https://application-dev.')]",
       "type": "string"
     },
     "Application prod url": {
-      "value": "[concat('https://application-prod.', reference(variables('aksId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName)]",
+      "value": "[concat('https://application-prod.')]",
       "type": "string"
     }
   }
