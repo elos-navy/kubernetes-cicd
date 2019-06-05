@@ -168,6 +168,22 @@ function setup_dns_record {
     -a $LB_IP
 }
 
+function install_external_dns {
+  cat > /etc/azure.json << EOF
+{
+  "tenantId": "$TENANT_ID",
+  "subscriptionId": "$SUBSCRIPTION_ID",
+  "resourceGroup": "$RESOURCE_GROUP",
+  "aadClientId": "$APP_ID",
+  "aadClientSecret": "$APP_KEY"
+}
+EOF
+
+  kubectl create secret generic azure-config-file \
+    --namespace \
+    --from-file=/etc/azure.json
+}
+
 function install_cert_manager {
   kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.8/deploy/manifests/00-crds.yaml
   kubectl get ns $CERT_MANAGER_NAMESPACE || kubectl create namespace $CERT_MANAGER_NAMESPACE
