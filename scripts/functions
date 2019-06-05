@@ -180,8 +180,11 @@ function install_external_dns {
 EOF
 
   kubectl create secret generic azure-config-file \
-    --namespace $EXTERNAL_DNS_NAMESPACE \
+    --namespace "$EXTERNAL_DNS_NAMESPACE" \
     --from-file=/etc/azure.json
+
+  create_from_template templates/ingress/external-dns.yaml \
+    _NAMESPACE_ "$EXTERNAL_DNS_NAMESPACE"
 }
 
 function install_cert_manager {

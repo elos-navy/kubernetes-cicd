@@ -6,7 +6,7 @@ APPLICATION_GIT_URL='https://github.com/elos-tech/openshift-cicd-app.git'
 
 ### ACR Registry
 # Must conform to the following pattern: '^[a-zA-Z0-9]*$'
-REGISTRY_NAME='elostestregistry'
+REGISTRY_NAME='eloscicdregistry'
 
 # Kubernetes secret name. This secret is used for ACR authentication.
 #
@@ -15,10 +15,10 @@ REGISTRY_SECRET_NAME='acr-secret'
 
 
 ### AKS cluster
-CLUSTER_NAME='ls-test-cluster'
-STORAGE_ACCOUNT_NAME='lsstorageaccount'
+CLUSTER_NAME='elos-aks-cluster'
+STORAGE_ACCOUNT_NAME='elosstorageaccount'
 LOCATION='westeurope'
-RESOURCE_GROUP='ls-test-rg'
+RESOURCE_GROUP='elos-aks-rg'
 SHADOW_RESOURCE_GROUP="MC_${RESOURCE_GROUP}_${CLUSTER_NAME}_${LOCATION}"
 
 ### Ingress
