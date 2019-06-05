@@ -180,7 +180,7 @@ function install_external_dns {
 EOF
 
   kubectl create secret generic azure-config-file \
-    --namespace \
+    --namespace $EXTERNAL_DNS_NAMESPACE \
     --from-file=/etc/azure.json
 }
 
