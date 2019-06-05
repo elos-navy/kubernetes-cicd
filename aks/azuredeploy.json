@@ -176,7 +176,7 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "fileUris": [
-                "[concat(variables('_artifactsLocation'), variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
+                "[concat(variables('_artifactsLocation'), '/', variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
               ]
             },
             "protectedSettings": {
