@@ -103,7 +103,7 @@
     "aksName": "aks-cluster",
     "aksDnsPrefix": "[concat('aks', uniqueString(resourceGroup().id))]",
     "aksId": "[concat('Microsoft.ContainerService/managedClusters/', variables('aksName'))]",
-    "_artifactsLocation": "https://raw.githubusercontent.com/elos-tech/aks-deploy-test/master",
+    "_artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
     "_extensionScript": "bootstrap.sh",
     "_artifactsLocationSasToken": ""
   },
