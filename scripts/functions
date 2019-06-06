@@ -165,7 +165,7 @@ function setup_dns_record {
     --resource-group "mc_${RESOURCE_GROUP}_${CLUSTER_NAME}_${LOCATION}" \
     --zone-name "$1" \
     -n "$2" \
-    -a $LB_IP
+    -a $ROUTER_IP
 }
 
 function install_external_dns {
@@ -184,7 +184,9 @@ EOF
     --from-file=/etc/azure.json
 
   create_from_template templates/ingress/external-dns.yaml \
-    _NAMESPACE_ "$EXTERNAL_DNS_NAMESPACE"
+    _NAMESPACE_ "$EXTERNAL_DNS_NAMESPACE" \
+    _DNS_DOMAIN_ "$1" \
+    _RESOURCE_GROUP_ "$RESOURCE_GROUP"
 }
 
 function install_cert_manager {

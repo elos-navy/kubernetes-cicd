@@ -30,8 +30,8 @@ do
       RESOURCE_GROUP="$1"
       shift
       ;;
-    --aks_name|-an)
-      AKS_NAME="$1"
+    --cluster_name|-an)
+      CLUSTER_NAME="$1"
       shift
       ;;
     --auxvm_fqdn|-jf)
@@ -55,7 +55,7 @@ do
       shift
       ;;
     *)
-      echo "ERROR: Unknown argument '$key' to script '$0'" 1>&2
+      echo "ERROR: Unknown argument '$KEY' to script '$0'" 1>&2
       exit -1
   esac
 done
@@ -70,7 +70,12 @@ sudo apt-get install --yes jq
 
 az login --service-principal -u "$APP_ID" -p "$APP_KEY" -t "$TENANT_ID"
 az account set --subscription "$SUBSCRIPTION_ID"
-az aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${AKS_NAME}" --admin
+az aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --admin
+
+kubectl get nodes || {
+  echo "Error: kubectl not configured correctly. Not connected to cluster!"
+  exit 0
+}
 
 install_helm
 install_ingress_controller
@@ -78,6 +83,7 @@ wait_for_ingress_controller_public_ip
 
 create_dns_zone '1234testik.io'
 setup_dns_record '1234testik.io' '*' "$ROUTER_IP"
+install_external_dns '1234testik.io'
 
 install_cert_manager
 
