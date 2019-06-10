@@ -98,7 +98,8 @@
     "publicIPAddressName": "[concat(variables('resourcePrefix'), '-ip')]",
     "vmName": "[concat(variables('resourcePrefix'), '-vm')]",
     "virtualNetworkName": "[concat(variables('resourcePrefix'), '-vnet')]",
-    "vmExtensionName": "[concat(variables('resourcePrefix'), '-bootstrap')]",
+    "bootstrapExtensionName": "[concat(variables('resourcePrefix'), '-bootstrap')]",
+    "getDomainExtensionName": "[concat(variables('resourcePrefix'), '-getdnsdomain')]",
     "frontEndNSGName": "[concat(variables('resourcePrefix'), '-nsg')]",
     "aksName": "aks-cluster",
     "aksDnsPrefix": "[concat('aks', uniqueString(resourceGroup().id))]",
@@ -162,7 +163,7 @@
       "resources": [ ]
     },
     {
-      "name": "[variables('vmExtensionName')]",
+      "name": "[variables('bootstrapExtensionName')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2018-05-01",
       "dependsOn": [
@@ -180,7 +181,43 @@
             "value": "[parameters('location')]"
           },
           "extensionName": {
-            "value": "[variables('vmExtensionName')]"
+            "value": "[variables('bootstrapExtensionName')]"
+          },
+          "vmName": {
+            "value": "[variables('vmName')]"
+          },
+          "fileUris": {
+            "value": [
+                "[concat(variables('artifactsLocation'), '/', variables('extensionScript'), variables('artifactsLocationSasToken'))]"
+            ]
+          },
+          "commandToExecute": {
+            "value": "[concat('echo blabla')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "[variables('getDomainExtensionName')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2018-05-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
+        "[variables('bootstrapExtensionName')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('customScriptTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "extensionName": {
+            "value": "[variables('getDomainExtensionName')]"
           },
           "vmName": {
             "value": "[variables('vmName')]"
@@ -373,7 +410,7 @@
       "type": "string"
     },
     "Testik": {
-      "value": "[replace(reference(variables('vmExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', '')]",
+      "value": "[replace(replace(reference(variables('getDomainExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', '')]",
       "type": "string"
     }
   }
