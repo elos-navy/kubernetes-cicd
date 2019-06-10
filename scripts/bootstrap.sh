@@ -77,6 +77,8 @@ kubectl get nodes || {
   exit 0
 }
 
+exit 0
+
 install_helm
 install_ingress_controller
 wait_for_ingress_controller_public_ip
@@ -87,7 +89,6 @@ install_external_dns '1234testik.io'
 
 install_cert_manager
 
-exit 0
 
 # Jenkins Namespace
 create_from_template templates/jenkins-namespace.yaml \
