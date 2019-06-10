@@ -373,8 +373,8 @@
       "type": "string"
     },
     "Testik": {
-      "value": "[reference(variables('vmExtensionName')).outputs.instanceView.value]",
-      "type": "object"
+      "value": "[reference(variables('vmExtensionName')).outputs.instanceView.value.substatuses[0].message]",
+      "type": "string"
     }
   }
 }
