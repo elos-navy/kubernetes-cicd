@@ -373,7 +373,7 @@
       "type": "string"
     },
     "Testik": {
-      "value": "[replace(reference(variables('vmExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: ', '')]",
+      "value": "[replace(reference(variables('vmExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', '')]",
       "type": "string"
     }
   }
