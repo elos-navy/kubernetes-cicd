@@ -105,8 +105,7 @@
     "aksId": "[concat('Microsoft.ContainerService/managedClusters/', variables('aksName'))]",
     "_artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
     "_extensionScript": "bootstrap-wrapper.sh",
-    "_artifactsLocationSasToken": "",
-    "customScriptTemplateUrl": "[uri(parameters('_artifactsLocation'), concat('nested/customscript.json', parameters('_artifactsLocationSasToken')))]"
+    "_artifactsLocationSasToken": ""
   },
   "resources": [
     {
@@ -160,42 +159,57 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
       ],
-      "resources": [ ]
-    },
-    {
-      "name": "[variables('vmExtensionName')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2018-05-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
-        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('customScriptTemplateUrl')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "extensionName": {
-            "value": "[variables('vmExtensionName')]"
-          },
-          "vmName": {
-            "value": "[variables('vmName')]"
-          },
-          "fileUris": {
-            "value": [
+      "resources": [
+        {
+          "type": "extensions",
+          "name": "[variables('vmExtensionName')]",
+          "apiVersion": "2019-03-01",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+            "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "typeHandlerVersion": "2.0",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
                 "[concat(variables('_artifactsLocation'), '/', variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
-            ]
-          },
-          "commandToExecute": {
-            "value": "[concat('echo blabla')]"
+              ]
+            },
+            "protectedSettings": {
+              "commandToExecute": "[concat('./', variables('_extensionScript'), ' --app_id \"', parameters('servicePrincipalAppId'), '\" --app_key \"', parameters('servicePrincipalAppKey'), '\" --subscription_id \"', subscription().subscriptionId, '\" --tenant_id \"', subscription().tenantId, '\" --resource_group \"', resourceGroup().name, '\" --cluster_name \"', variables('aksName'), '\" --auxvm_fqdn \"', reference(variables('publicIPAddressName')).dnsSettings.fqdn, '\" --jenkins_admin_password \"', parameters('jenkinsAdminPassword'), '\" --application_git_url \"', parameters('applicationGitUrl'), '\" --registry_name \"', variables('acrName'), '\" --location \"', parameters('location'), '\"')]"
+            }
+          }
+        },
+        {
+          "type": "extensions",
+          "name": "dns-zone-name-output",
+          "apiVersion": "2019-03-01",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+            "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
+            "[resourceId('Microsoft.Azure.Extensions/CustomScript', variables('vmExtensionName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "typeHandlerVersion": "2.0",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(variables('_artifactsLocation'), '/', variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
+              ]
+            },
+            "protectedSettings": {
+              "commandToExecute": "[concat('echo blabla')]"
+            }
           }
         }
-      }
+      ]
     },
     {
       "type": "Microsoft.Network/virtualNetworks",
