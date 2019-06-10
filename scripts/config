@@ -25,9 +25,3 @@ SHADOW_RESOURCE_GROUP="MC_${RESOURCE_GROUP}_${CLUSTER_NAME}_${LOCATION}"
 INGRESS_NAMESPACE='ingress-system'
 CERT_MANAGER_NAMESPACE='cert-manager'
 EXTERNAL_DNS_NAMESPACE=$INGRESS_NAMESPACE
-
-# This should be filled when setting up routing on AKS. It's retrieved
-# via az cli command as only one DNS zone created by HTTP application
-# routing plugin.
-DNS_ZONE_NAME=''
-

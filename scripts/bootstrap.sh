@@ -83,9 +83,10 @@ install_helm
 install_ingress_controller
 wait_for_ingress_controller_public_ip
 
-create_dns_zone '1234testik.io'
-setup_dns_record '1234testik.io' '*' "$ROUTER_IP"
-install_external_dns '1234testik.io'
+DNS_ZONE_NAME='elos-testik.io'
+create_dns_zone $DNS_ZONE_NAME
+setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
+install_external_dns $DNS_ZONE_NAME
 
 install_cert_manager
 

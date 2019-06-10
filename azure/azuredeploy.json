@@ -183,6 +183,29 @@
               "commandToExecute": "[concat('./', variables('_extensionScript'), ' --app_id \"', parameters('servicePrincipalAppId'), '\" --app_key \"', parameters('servicePrincipalAppKey'), '\" --subscription_id \"', subscription().subscriptionId, '\" --tenant_id \"', subscription().tenantId, '\" --resource_group \"', resourceGroup().name, '\" --cluster_name \"', variables('aksName'), '\" --auxvm_fqdn \"', reference(variables('publicIPAddressName')).dnsSettings.fqdn, '\" --jenkins_admin_password \"', parameters('jenkinsAdminPassword'), '\" --application_git_url \"', parameters('applicationGitUrl'), '\" --registry_name \"', variables('acrName'), '\" --location \"', parameters('location'), '\"')]"
             }
           }
+        },
+        {
+          "type": "extensions",
+          "name": "dns-zone-name-output",
+          "apiVersion": "2019-03-01",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Azure.Extensions/CustomScript', variables('vmExtensionName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "typeHandlerVersion": "2.0",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(variables('_artifactsLocation'), '/', variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
+              ]
+            },
+            "protectedSettings": {
+              "commandToExecute": "[concat('echo blabla')]"
+            }
+          }
         }
       ]
     },
@@ -360,6 +383,10 @@
     },
     "Application prod url": {
       "value": "[concat('https://application-prod.')]",
+      "type": "string"
+    },
+    "Testik": {
+      "value": "[reference(resourceId('Microsoft.Azure.Extensions/CustomScript', 'dns-zone-name-output')).outputs.instanceView.value]",
       "type": "string"
     }
   }
