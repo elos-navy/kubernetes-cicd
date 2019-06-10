@@ -102,11 +102,10 @@
     "frontEndNSGName": "[concat(variables('resourcePrefix'), '-nsg')]",
     "aksName": "aks-cluster",
     "aksDnsPrefix": "[concat('aks', uniqueString(resourceGroup().id))]",
-    "aksId": "[concat('Microsoft.ContainerService/managedClusters/', variables('aksName'))]",
-    "_artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
-    "_extensionScript": "bootstrap-wrapper.sh",
-    "_artifactsLocationSasToken": "",
-    "customScriptTemplateUrl": "[uri(variables('_artifactsLocation'), concat('azure/nested/customscript.json', variables('_artifactsLocationSasToken')))]"
+    "artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
+    "extensionScript": "bootstrap-wrapper.sh",
+    "artifactsLocationSasToken": "",
+    "customScriptTemplateUrl": "[uri(variables('artifactsLocation'), concat('azure/nested/customscript.json', variables('artifactsLocationSasToken')))]"
   },
   "resources": [
     {
@@ -188,7 +187,7 @@
           },
           "fileUris": {
             "value": [
-                "[concat(variables('_artifactsLocation'), '/', variables('_extensionScript'), variables('_artifactsLocationSasToken'))]"
+                "[concat(variables('artifactsLocation'), '/', variables('extensionScript'), variables('artifactsLocationSasToken'))]"
             ]
           },
           "commandToExecute": {
@@ -375,7 +374,7 @@
     },
     "Testik": {
       "value": "[reference(variables('vmExtensionName')).outputs.instanceView.value]",
-      "type": "string"
+      "type": "object"
     }
   }
 }
