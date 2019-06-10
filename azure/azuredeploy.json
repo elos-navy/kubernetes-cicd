@@ -374,7 +374,7 @@
       "type": "string"
     },
     "Testik": {
-      "value": "[reference(resourceId('Microsoft.Azure.Extensions/CustomScript', 'dns-zone-name-output')).outputs.instanceView.value]",
+      "value": "[reference(variables('vmExtensionName')).outputs.instanceView.value]",
       "type": "string"
     }
   }
