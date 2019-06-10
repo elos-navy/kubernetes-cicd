@@ -190,6 +190,8 @@
           "apiVersion": "2019-03-01",
           "location": "[parameters('location')]",
           "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+            "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
             "[resourceId('Microsoft.Azure.Extensions/CustomScript', variables('vmExtensionName'))]"
           ],
           "properties": {
