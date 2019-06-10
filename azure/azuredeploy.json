@@ -106,7 +106,7 @@
     "_artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
     "_extensionScript": "bootstrap-wrapper.sh",
     "_artifactsLocationSasToken": "",
-    "customScriptTemplateUrl": "[uri(parameters('_artifactsLocation'), concat('nested/customscript.json', parameters('_artifactsLocationSasToken')))]"
+    "customScriptTemplateUrl": "[uri(variables('_artifactsLocation'), concat('azure/nested/customscript.json', variables('_artifactsLocationSasToken')))]"
   },
   "resources": [
     {
