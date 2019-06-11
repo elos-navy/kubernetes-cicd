@@ -90,18 +90,10 @@
     "adminUsername": "azureuser",
     "acrAdminUserEnabled": true,
     "acrName": "[concat('acr',uniqueString(resourceGroup().id))]",
-    "auxvmDnsPrefix": "[concat('auxvm-',uniqueString(resourceGroup().id))]",
     "resourcePrefix": "auxvm",
-    "OSDiskName": "[concat(variables('resourcePrefix'), '-os-disk')]",
-    "nicName": "[concat(variables('resourcePrefix'), '-nic')]",
-    "subnetName": "[concat(variables('resourcePrefix'), '-subnet')]",
-    "publicIPAddressName": "[concat(variables('resourcePrefix'), '-ip')]",
     "vmName": "[concat(variables('resourcePrefix'), '-vm')]",
-    "virtualNetworkName": "[concat(variables('resourcePrefix'), '-vnet')]",
     "bootstrapExtensionName": "[concat(variables('resourcePrefix'), '-bootstrap')]",
-    "getDomainExtensionName": "[concat(variables('resourcePrefix'), '-getdnsdomain')]",
-    "frontEndNSGName": "[concat(variables('resourcePrefix'), '-nsg')]",
-    "auxvmDeploymentName": "auxvm",
+    "auxvmDeploymentName": "auxvm-deployment",
     "aksName": "aks-cluster",
     "aksDnsPrefix": "[concat('aks', uniqueString(resourceGroup().id))]",
     "artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
@@ -165,43 +157,7 @@
             ]
           },
           "commandToExecute": {
-            "value": "[concat('echo blablabla')]"
-          }
-        }
-      }
-    },
-    {
-      "name": "[variables('getDomainExtensionName')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2018-05-01",
-      "dependsOn": [
-        "[variables('auxvmDeploymentName')]",
-        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
-        "[variables('bootstrapExtensionName')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('customScriptTemplateUrl')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "extensionName": {
-            "value": "[variables('getDomainExtensionName')]"
-          },
-          "vmName": {
-            "value": "[variables('vmName')]"
-          },
-          "fileUris": {
-            "value": [
-                "[concat(variables('artifactsLocation'), '/', variables('extensionScript'), variables('artifactsLocationSasToken'))]"
-            ]
-          },
-          "commandToExecute": {
-            "value": "[concat('echo blabla')]"
+            "value": "[concat('./', variables('_extensionScript'), ' --app_id \"', parameters('servicePrincipalAppId'), '\" --app_key \"', parameters('servicePrincipalAppKey'), '\" --subscription_id \"', subscription().subscriptionId, '\" --tenant_id \"', subscription().tenantId, '\" --resource_group \"', resourceGroup().name, '\" --cluster_name \"', variables('aksName'), '\" --jenkins_admin_password \"', parameters('jenkinsAdminPassword'), '\" --application_git_url \"', parameters('applicationGitUrl'), '\" --registry_name \"', variables('acrName'), '\" --location \"', parameters('location'), '\" &>/bootstrap.log && echo blabla')]"
           }
         }
       }
@@ -265,7 +221,7 @@
   "outputs": {
     "Auxvm ssh": {
       "type": "string",
-      "value": "[concat('ssh ', variables('adminUsername'), '@', reference([variables('auxvmDeploymentName')]).outputs.auxvmFqdn.value)]"
+      "value": "[concat('ssh ', variables('adminUsername'), '@', reference(variables('auxvmDeploymentName')).outputs.auxvmFqdn.value)]"
     },
     "Kubernetes master fqdn": {
       "type": "string",
@@ -296,7 +252,7 @@
       "type": "string"
     },
     "Testik": {
-      "value": "[replace(replace(reference(variables('getDomainExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', '')]",
+      "value": "[replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', '')]",
       "type": "string"
     }
   }

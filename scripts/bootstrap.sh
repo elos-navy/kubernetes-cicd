@@ -34,10 +34,6 @@ do
       CLUSTER_NAME="$1"
       shift
       ;;
-    --auxvm_fqdn|-jf)
-      AUXVM_FQDN="$1"
-      shift
-      ;;
     --jenkins_admin_password)
       JENKINS_ADMIN_PASSWORD="$1"
       shift
