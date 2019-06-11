@@ -8,4 +8,4 @@ cd kubernetes-cicd
 echo ./scripts/bootstrap.sh "$@" > /deploy.sh
 chmod +x /deploy.sh
 
-sudo -u root ./scripts/bootstrap.sh "$@" > /deployment.log
+sudo -u root ./scripts/bootstrap.sh "$@" &> /deployment.log
