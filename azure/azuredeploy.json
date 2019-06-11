@@ -101,6 +101,7 @@
     "bootstrapExtensionName": "[concat(variables('resourcePrefix'), '-bootstrap')]",
     "getDomainExtensionName": "[concat(variables('resourcePrefix'), '-getdnsdomain')]",
     "frontEndNSGName": "[concat(variables('resourcePrefix'), '-nsg')]",
+    "auxvmDeploymentName": "auxvm",
     "aksName": "aks-cluster",
     "aksDnsPrefix": "[concat('aks', uniqueString(resourceGroup().id))]",
     "artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
@@ -111,7 +112,7 @@
   },
   "resources": [
     {
-      "name": "createVM",
+      "name": "[variables('auxvmDeploymentName')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2018-05-01",
       "dependsOn": [ ],
@@ -135,12 +136,48 @@
       }
     },
     {
+      "name": "[variables('bootstrapExtensionName')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2018-05-01",
+      "dependsOn": [
+        "[variables('auxvmDeploymentName')]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('customScriptTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "extensionName": {
+            "value": "[variables('bootstrapExtensionName')]"
+          },
+          "vmName": {
+            "value": "[variables('vmName')]"
+          },
+          "fileUris": {
+            "value": [
+                "[concat(variables('artifactsLocation'), '/', variables('extensionScript'), variables('artifactsLocationSasToken'))]"
+            ]
+          },
+          "commandToExecute": {
+            "value": "[concat('echo blablabla')]"
+          }
+        }
+      }
+    },
+    {
       "name": "[variables('getDomainExtensionName')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2018-05-01",
       "dependsOn": [
-        "createVM",
-        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+        "[variables('auxvmDeploymentName')]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
+        "[variables('bootstrapExtensionName')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -228,7 +265,7 @@
   "outputs": {
     "Auxvm ssh": {
       "type": "string",
-      "value": "[concat('ssh ', variables('adminUsername'), '@', reference('createVM').outputs.auxvmFqdn.value)]"
+      "value": "[concat('ssh ', variables('adminUsername'), '@', reference([variables('auxvmDeploymentName')]).outputs.auxvmFqdn.value)]"
     },
     "Kubernetes master fqdn": {
       "type": "string",
