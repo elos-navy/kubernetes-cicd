@@ -46,18 +46,18 @@ vim scripts/config # Nastavenie nazvov rg, clusteru, registry. Pripadne nechat t
 #### Vytvorenie clusteru
 
 ```
-./scripts/manage_aks_cluster.sh create_rg
-./scripts/manage_aks_cluster.sh create_cluster
-./scripts/manage_aks_cluster.sh create_acr
-./scripts/manage_aks_cluster.sh setup_credentials
+./scripts/aks/manage_cluster.sh create_rg
+./scripts/aks/manage_cluster.sh create_cluster
+./scripts/aks/manage_cluster.sh create_acr
+./scripts/aks/manage_cluster.sh setup_credentials
 ```
 
 #### Zmazanie clusteru
 
 ```
-./scripts/manage_aks_cluster.sh delete_cluster
-./scripts/manage_aks_cluster.sh delete_acr
-./scripts/manage_aks_cluster.sh delete_rg
+./scripts/aks/manage_cluster.sh delete_cluster
+./scripts/aks/manage_cluster.sh delete_acr
+./scripts/aks/manage_cluster.sh delete_rg
 ```
 
 #### Vytvorenie Jenkinsu

@@ -75,7 +75,7 @@ install_helm
 install_ingress_controller
 install_cert_manager
 
-enable_application_routing_addon
+azure_enable_application_routing_addon
 
 # Store zone name for command to return it to ARM deployment output.
 echo $DNS_ZONE_NAME > /http_application_routing_zone
@@ -118,9 +118,9 @@ create_from_template templates/ingress/tls-ingress.yaml \
   _SERVICE_NAME_ "${PREFIX}jenkins" \
   _SERVICE_PORT_ 8080
 
-
+# Setup wildcard DNS record for apps. This uses domain provided
+# by HTTP Application Routing AKS addon enabled above.
 wait_for_ingress_controller_public_ip
-setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
-
+azure_setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
 
 rm -rf $TMP_DIR
