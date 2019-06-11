@@ -106,93 +106,30 @@
     "artifactsLocation": "https://raw.githubusercontent.com/elos-tech/kubernetes-cicd/master/scripts",
     "extensionScript": "bootstrap-wrapper.sh",
     "artifactsLocationSasToken": "",
-    "customScriptTemplateUrl": "[uri(variables('artifactsLocation'), concat('azure/nested/customscript.json', variables('artifactsLocationSasToken')))]"
+    "customScriptTemplateUrl": "[uri(variables('artifactsLocation'), concat('azure/nested/customscript.json', variables('artifactsLocationSasToken')))]",
+    "auxvmTemplateUrl": "[uri(variables('artifactsLocation'), concat('azure/nested/auxvm.json', variables('artifactsLocationSasToken')))]"
   },
   "resources": [
     {
-      "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('vmName')]",
-      "apiVersion": "2016-04-30-preview",
-      "location": "[parameters('location')]",
-      "properties": {
-        "osProfile": {
-          "computerName": "[variables('vmName')]",
-          "adminUsername": "[variables('adminUsername')]",
-          "linuxConfiguration": {
-            "disablePasswordAuthentication": true,
-            "ssh": {
-              "publicKeys": [
-                {
-                  "path": "[concat('/home/', variables('adminUsername'), '/.ssh/authorized_keys')]",
-                  "keyData": "[parameters('sshPublicKey')]"
-                }
-              ]
-            }
-          }
-        },
-        "hardwareProfile": {
-          "vmSize": "[parameters('virtualMachineSize')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "Canonical",
-            "offer": "UbuntuServer",
-            "sku": "16.04-LTS",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "[variables('OSDiskName')]",
-            "createOption": "FromImage",
-            "managedDisk": {
-              "storageAccountType": "Standard_LRS"
-            }
-          },
-          "dataDisks": []
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
-      ],
-      "resources": [ ]
-    },
-    {
-      "name": "[variables('bootstrapExtensionName')]",
+      "name": "createVM",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2018-05-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
-        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
-      ],
+      "dependsOn": [ ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[variables('customScriptTemplateUrl')]",
+          "uri": "[variables('auxvmTemplateUrl')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
+          "sshPublicKey": {
+            "value": "[parameters('sshPublicKey')]"
+          },
+          "virtualMachineSize": {
+            "value": "[parameters('virtualMachineSize')]"
+          },
           "location": {
             "value": "[parameters('location')]"
-          },
-          "extensionName": {
-            "value": "[variables('bootstrapExtensionName')]"
-          },
-          "vmName": {
-            "value": "[variables('vmName')]"
-          },
-          "fileUris": {
-            "value": [
-                "[concat(variables('artifactsLocation'), '/', variables('extensionScript'), variables('artifactsLocationSasToken'))]"
-            ]
-          },
-          "commandToExecute": {
-            "value": "[concat('echo blabla')]"
           }
         }
       }
@@ -202,9 +139,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2018-05-01",
       "dependsOn": [
-        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
-        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
-        "[variables('bootstrapExtensionName')]"
+        "createVM",
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -231,92 +167,6 @@
             "value": "[concat('echo blabla')]"
           }
         }
-      }
-    },
-    {
-      "type": "Microsoft.Network/virtualNetworks",
-      "name": "[variables('virtualNetworkName')]",
-      "apiVersion": "2016-12-01",
-      "location": "[parameters('location')]",
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "10.89.0.0/16"
-          ]
-        },
-        "subnets": [
-          {
-            "name": "[variables('subnetName')]",
-            "properties": {
-              "addressPrefix": "10.89.0.0/24"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('nicName')]",
-      "apiVersion": "2016-09-01",
-      "location": "[parameters('location')]",
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "ipconfig1",
-            "properties": {
-              "subnet": {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
-              },
-              "privateIPAllocationMethod": "Dynamic",
-              "publicIpAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-              }
-            }
-          }
-        ],
-        "networkSecurityGroup": {
-          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('frontEndNSGName'))]"
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
-        "[resourceId('Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]",
-        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('frontEndNSGName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[variables('publicIPAddressName')]",
-      "apiVersion": "2017-06-01",
-      "location": "[parameters('location')]",
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameLabel": "[variables('auxvmDnsPrefix')]"
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Network/networkSecurityGroups",
-      "name": "[variables('frontEndNSGName')]",
-      "apiVersion": "2017-06-01",
-      "location": "[parameters('location')]",
-      "properties": {
-        "securityRules": [
-          {
-            "name": "default-allow-ssh",
-            "properties": {
-              "priority": 1000,
-              "protocol": "Tcp",
-              "access": "Allow",
-              "direction": "Inbound",
-              "sourceAddressPrefix": "*",
-              "sourcePortRange": "*",
-              "destinationAddressPrefix": "*",
-              "destinationPortRange": "22"
-            }
-          }
-        ]
       }
     },
     {
