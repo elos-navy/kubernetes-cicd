@@ -71,15 +71,10 @@ kubectl get nodes || {
   exit 0
 }
 
-install_helm
-install_ingress_controller
-install_cert_manager
-
-azure_enable_application_routing_addon
-
+# Enable App routing addon and obtain DNS zone name.
 # Store zone name for command to return it to ARM deployment output.
+azure_enable_application_routing_addon
 echo $DNS_ZONE_NAME > /http_application_routing_zone
-
 
 # Jenkins Namespace
 create_from_template templates/jenkins-namespace.yaml \
@@ -96,6 +91,11 @@ create_from_template templates/jenkins-persistent.yaml \
   _COMPONENTS_PIPELINE_JOB_NAME_ 'cicd-components-pipeline' \
   _APP_PIPELINE_JOB_NAME_ 'cicd-app-pipeline' \
   _DNS_ZONE_NAME_ "$DNS_ZONE_NAME"
+
+# Ingress controller
+install_helm
+install_ingress_controller
+install_cert_manager
 
 # Build and push Jenkins agent POD to ACR registry
 az acr build -t ${PREFIX}jenkins/jenkins-agent-appdev:latest -r $REGISTRY_NAME artefacts/
@@ -122,5 +122,9 @@ create_from_template templates/ingress/tls-ingress.yaml \
 # by HTTP Application Routing AKS addon enabled above.
 wait_for_ingress_controller_public_ip
 azure_setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
+
+# Wait for jenkins pod to be ready. So after ARM deployment jenkins
+# should be ready and available.
+wait_for_deployment_ready "${PREFIX}jenkins" "app=${PREFIX}jenkins"
 
 rm -rf $TMP_DIR
