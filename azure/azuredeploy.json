@@ -229,7 +229,7 @@
   "outputs": {
     "Auxvm ssh": {
       "type": "string",
-      "value": "[concat('ssh ', variables('adminUsername'), '@', reference(variables('publicIPAddressName')).dnsSettings.fqdn)]"
+      "value": "[concat('ssh ', variables('adminUsername'), '@', reference('createVM').outputs.auxvmFqdn.value)]"
     },
     "Kubernetes master fqdn": {
       "type": "string",
