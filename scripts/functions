@@ -168,6 +168,15 @@ function setup_dns_record {
     -a $ROUTER_IP
 }
 
+function enable_application_routing_addon {
+  DNS_ZONE_NAME=$(az aks enable-addons \
+    --resource-group ${RESOURCE_GROUP} \
+    --name ${CLUSTER_NAME} \
+    --addons http_application_routing \
+  | jq '.addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName' \
+  | sed 's/"//g')
+}
+
 function install_external_dns {
   cat > /etc/azure.json << EOF
 {

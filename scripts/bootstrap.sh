@@ -58,8 +58,6 @@ done
 
 set -x
 
-echo "./scripts/bootstrap.sh $@" > /init.sh
-
 install_kubectl
 install_az
 sudo apt-get install --yes jq
@@ -73,18 +71,14 @@ kubectl get nodes || {
   exit 0
 }
 
-exit 0
-
 install_helm
 install_ingress_controller
-wait_for_ingress_controller_public_ip
-
-DNS_ZONE_NAME='elos-testik.io'
-create_dns_zone $DNS_ZONE_NAME
-setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
-install_external_dns $DNS_ZONE_NAME
-
 install_cert_manager
+
+enable_application_routing_addon
+
+# Store zone name for command to return it to ARM deployment output.
+echo $DNS_ZONE_NAME > /http_application_routing_zone
 
 
 # Jenkins Namespace
@@ -115,7 +109,7 @@ kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
     --docker-server=$ACR_HOSTNAME \
     --docker-username=$ACR_USERNAME \
     --docker-password=$ACR_PASSWORD \
-    --docker-email='ls@elostech.cz'
+    --docker-email='info@elostech.cz'
 
 create_from_template templates/ingress/tls-ingress.yaml \
   _RESOURCE_NAME_ 'jenkins' \
@@ -123,5 +117,10 @@ create_from_template templates/ingress/tls-ingress.yaml \
   _NAMESPACE_ "${PREFIX}jenkins" \
   _SERVICE_NAME_ "${PREFIX}jenkins" \
   _SERVICE_PORT_ 8080
+
+
+wait_for_ingress_controller_public_ip
+setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
+
 
 rm -rf $TMP_DIR
