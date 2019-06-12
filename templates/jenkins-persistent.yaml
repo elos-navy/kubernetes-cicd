@@ -276,7 +276,7 @@ data:
           _RESOURCE_NAME_ &quot;${name_prefix}application-prod&quot; \
           _DNS_NAME_ &quot;application-prod.${dns_domain}&quot; \
           _NAMESPACE_ &quot;${app_prod_namespace}&quot; \
-          _SERVICE_NAME_ &quot;tasks&quot; \
+          _SERVICE_NAME_ &quot;green-tasks&quot; \
           _SERVICE_PORT_ 8080
         &quot;&quot;&quot;
         
@@ -396,11 +396,16 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
-    def prefix               = &apos;_PREFIX_&apos;
-    def acr_hostname         = &apos;_REGISTRY_NAME_.azurecr.io&apos;
-    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def prefix               = &apos;cicd-&apos;
+    def acr_hostname         = &apos;acrptcww4kpfqv4c.azurecr.io&apos;
+    def acr_secret_name      = &apos;acr-secret&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
-    def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
+    def git_repo_url         = &apos;https://github.com/elos-tech/openshift-cicd-app&apos;
+    
+    // Helper variable for prefix substitution with double sed-ed templates.
+    def prefix_label          = &apos;PREFIX&apos;
+    def acr_secret_name_label = &apos;REGISTRY_SECRET_NAME&apos;
+    def image_label           = &apos;IMAGE&apos;
     
     def jenkins_namespace    = &quot;${prefix}jenkins&quot;
     def components_namespace = &quot;${prefix}components&quot;
@@ -413,6 +418,10 @@ data:
     def tasks_prod_url       = &quot;http://tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
     
     def mvnCmd               = &apos;mvn -s ./nexus_openshift_settings.xml&apos;
+    
+    // Blue/Green deployment in production
+    def gb_destination       = &apos;green&apos;
+    def gb_active            = &apos;&apos;
     
     
     // Convenience Functions to read variables from the pom.xml
@@ -605,7 +614,7 @@ data:
             }
           }
         }
-        
+    
         stage(&apos;Deploy Application into DEV&apos;) {
           steps {
             container(&apos;maven&apos;) {
@@ -614,15 +623,15 @@ data:
               sh &quot;kubectl --namespace=${tasks_dev_namespace} delete all,configmap,replicaset --all --ignore-not-found=true&quot;
               
               sh &quot;&quot;&quot;
-                kubectl --namespace=${tasks_dev_namespace} create configmap tasks-config \
+                kubectl --namespace=${tasks_dev_namespace} create configmap ${prefix}tasks-config \
                   --from-file=./configuration/application-users.properties \
                   --from-file=./configuration/application-roles.properties
               &quot;&quot;&quot;
               
               create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
-                _PREFIX_ ${prefix} \
-                _REGISTRY_SECRET_NAME_ ${acr_secret_name} \
-                _IMAGE_ ${acr_hostname}/${prefix}jenkins/tasks:${version}
+                _${prefix_label}_ ${prefix} \
+                _${acr_secret_name_label}_ ${acr_secret_name} \
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${version}
               &quot;&quot;&quot;)
               
               //sh &quot;kubectl --namespace=${tasks_dev_namespace} run tasks --image=${acr_hostname}/${prefix}jenkins/tasks:${version} --replicas=1 --port=8080&quot;
@@ -662,19 +671,47 @@ data:
             container(&apos;maven&apos;) {
               echo &quot;Deploying container image to Production Project&quot;
               
-              sh &quot;kubectl --namespace=${tasks_prod_namespace} delete all,configmap,replicaset --all --ignore-not-found=true&quot;
-              
+              gb_active = sh(
+                returnStdout: true,
+                script: &quot;kubectl get ingress ${prefix}application-prod -n ${tasks_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
+              ).trim()
+    
+              if (gb_active == &apos;green-tasks&apos;) {
+                gb_destination = &apos;blue&apos;
+              } else {
+                gb_destination = &apos;green&apos;
+              }
+    
+              sh &quot;kubectl --namespace=${tasks_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-tasks&apos; --ignore-not-found=true&quot;
+    
               sh &quot;&quot;&quot;
-                kubectl --namespace=${tasks_prod_namespace} create configmap tasks-config \
+                kubectl --namespace=${tasks_prod_namespace} delete configmap ${gb_destination}-tasks-config \
+                  --ignore-not-found=true
+                kubectl --namespace=${tasks_prod_namespace} create configmap ${gb_destination}-tasks-config \
                   --from-file=./configuration/application-users.properties \
                   --from-file=./configuration/application-roles.properties
               &quot;&quot;&quot;
-              
+    
               create_from_template(tasks_prod_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
-                _PREFIX_ ${prefix} \
-                _REGISTRY_SECRET_NAME_ ${acr_secret_name} \
-                _IMAGE_ ${acr_hostname}/${prefix}jenkins/tasks:${version}
+                _${prefix_label}_ &quot;${gb_destination}-&quot; \
+                _${acr_secret_name_label}_ ${acr_secret_name} \
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${version}
               &quot;&quot;&quot;)
+            }
+          }
+        }
+        
+        stage(&apos;Switch to new Version&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              input &quot;Switch Production?&quot;
+    
+              sh &quot;&quot;&quot;
+                kubectl patch ingress ${prefix}application-prod \
+                  -n ${tasks_prod_namespace} \
+                  --type=json \
+                  -p=&apos;[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/rules/0/http/paths/0/backend/serviceName&quot;, &quot;value&quot;:&quot;${gb_destination}-tasks&quot;}]&apos;
+              &quot;&quot;&quot;
             }
           }
         }
@@ -743,3 +780,4 @@ data:
       <triggers/>
       <disabled>false</disabled>
     </flow-definition>
+
