@@ -48,20 +48,4 @@ subjects:
 - kind: ServiceAccount
   name: default
   namespace: _PREFIX_jenkins
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: tasks
-  name: tasks
-  namespace: _PREFIX_tasks-dev
-spec:
-  ports:
-  - port: 8080
-    protocol: TCP
-    targetPort: 8080
-  selector:
-    app: tasks
-  sessionAffinity: None
-type: ClusterIP
+
