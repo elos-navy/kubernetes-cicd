@@ -250,6 +250,10 @@
     "Application prod url": {
       "value": "[concat('https://application-prod.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
+    },
+    "Testik": {
+      "value": "[reference(variables('bootstrapExtensionName')).outputs.dnsDomain]",
+      "type": "string"
     }
   }
 }
