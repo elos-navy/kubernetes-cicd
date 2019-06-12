@@ -397,7 +397,7 @@ data:
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
     def prefix               = &apos;_PREFIX_&apos;
-    def acr_hostname         = &apos;_REGISTRY_NAME_&apos;
+    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
     def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
     def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
