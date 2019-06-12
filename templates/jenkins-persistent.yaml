@@ -671,15 +671,17 @@ data:
             container(&apos;maven&apos;) {
               echo &quot;Deploying container image to Production Project&quot;
               
-              gb_active = sh(
-                returnStdout: true,
-                script: &quot;kubectl get ingress ${prefix}application-prod -n ${tasks_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
-              ).trim()
+              script {
+                gb_active = sh(
+                  returnStdout: true,
+                  script: &quot;kubectl get ingress ${prefix}application-prod -n ${tasks_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
+                ).trim()
     
-              if (gb_active == &apos;green-tasks&apos;) {
-                gb_destination = &apos;blue&apos;
-              } else {
-                gb_destination = &apos;green&apos;
+                if (gb_active == &apos;green-tasks&apos;) {
+                  gb_destination = &apos;blue&apos;
+                } else {
+                  gb_destination = &apos;green&apos;
+                }
               }
     
               sh &quot;kubectl --namespace=${tasks_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-tasks&apos; --ignore-not-found=true&quot;
