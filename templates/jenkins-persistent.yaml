@@ -414,15 +414,14 @@ data:
     
     def sonarqube_url        = &quot;${prefix}sonarqube.${prefix}components.svc.cluster.local&quot;
     def nexus_url            = &quot;http://${prefix}nexus3.${prefix}components.svc.cluster.local:8081&quot;
-    def tasks_dev_url        = &quot;http://tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;
-    def tasks_prod_url       = &quot;http://tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
+    def tasks_dev_url        = &quot;http://${prefix}tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;
+    //def tasks_prod_url       = &quot;http://${prefix}tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
     
     def mvnCmd               = &apos;mvn -s ./nexus_openshift_settings.xml&apos;
     
     // Blue/Green deployment in production
     def gb_destination       = &apos;green&apos;
     def gb_active            = &apos;&apos;
-    
     
     // Convenience Functions to read variables from the pom.xml
     // Do not change anything below this line.
@@ -501,8 +500,9 @@ data:
         def groupId    = null
         def artifactId = null
         def version    = null
-        def devTag     = null
-        def prodTag    = null 
+    
+        def dev_tag    = null
+        def prod_tag   = null
       }
       
       stages {
@@ -533,10 +533,12 @@ data:
                 groupId    = getGroupIdFromPom(&quot;pom.xml&quot;)
                 artifactId = getArtifactIdFromPom(&quot;pom.xml&quot;)
                 version    = getVersionFromPom(&quot;pom.xml&quot;)
-                devTag     = &quot;${version}-${BUILD_NUMBER}&quot;
-                prodTag    = &quot;${version}&quot;
+                
+                dev_tag    = &quot;${version}-${BUILD_NUMBER}&quot;
+                prod_tag   = &quot;${version}&quot;
               }
               
+              // Setup correct URL to nexus service in config XML file.
               sh &quot;sed -i &apos;s@&lt;url&gt;http://.*:8081@&lt;url&gt;${nexus_url}@&apos; nexus_openshift_settings.xml&quot;
             }
           }
@@ -574,7 +576,7 @@ data:
           steps {
             container(&apos;maven&apos;) {
               echo &apos;Running Sonar scans&apos;
-              //sh &quot;${mvnCmd} sonar:sonar -Dsonar.host.url=http://${sonarqube_url}:9000 -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${devTag}&quot;
+              sh &quot;${mvnCmd} sonar:sonar -Dsonar.host.url=http://${sonarqube_url}:9000 -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${dev_tag}&quot;
             }
           }
         }
@@ -608,7 +610,11 @@ data:
     
                    /kaniko/executor \
                      --context /workspace \
-                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${version}
+                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${dev_tag}
+                     
+                   /kaniko/executor \
+                     --context /workspace \
+                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${prod_tag}
                  &quot;&quot;&quot;
                }
             }
@@ -631,13 +637,8 @@ data:
               create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
                 _${prefix_label}_ ${prefix} \
                 _${acr_secret_name_label}_ ${acr_secret_name} \
-                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${version}
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${dev_tag}
               &quot;&quot;&quot;)
-              
-              //sh &quot;kubectl --namespace=${tasks_dev_namespace} run tasks --image=${acr_hostname}/${prefix}jenkins/tasks:${version} --replicas=1 --port=8080&quot;
-              //sh &quot;kubectl --namespace=${tasks_dev_namespace} patch deployment tasks -p &apos;{\&quot;spec\&quot;: {\&quot;template\&quot;: {\&quot;spec\&quot;: {\&quot;imagePullSecrets\&quot;: [{\&quot;name\&quot;: \&quot;${acr_secret_name}\&quot;}]}}}}&apos;&quot;
-              //sh &quot;kubectl --namespace=${tasks_dev_namespace} expose deployment tasks --type=LoadBalancer --name=tasks --port=8080&quot;
-              //sh &quot;kubectl --namespace=${tasks_dev_namespace} expose deployment tasks --type=ClusterIP --name=tasks --port=8080&quot;
             }
           }
         }
@@ -647,9 +648,22 @@ data:
             container(&apos;maven&apos;) {
               echo &quot;Running Integration Tests&quot;
               //sleep 30
-              wait_for_deployment_ready(tasks_dev_namespace, &apos;tasks&apos;)
               
-              /*
+              // Wait till pod is ready
+              wait_for_deployment_ready(tasks_dev_namespace, &quot;${prefix}tasks&quot;)
+              
+              // Wait and check if service is already available
+              sh &quot;&quot;&quot;
+                COUNTER=0
+                while true;
+                do
+                  curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${tasks_dev_url} &amp;&amp; break
+                  sleep 10
+                  let COUNTER=\$COUNTER+1
+                  [ \$COUNTER -eq 10 ] &amp;&amp; exit 1
+                done
+              &quot;&quot;&quot;
+              
               // Create a new task called &quot;integration_test_1&quot;
               echo &quot;Creating task&quot;
               sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X POST ${tasks_dev_url}/ws/tasks/integration_test_1&quot;
@@ -661,7 +675,6 @@ data:
               // Delete task with id &quot;1&quot;
               echo &quot;Deleting tasks&quot;
               sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X DELETE ${tasks_dev_url}/ws/tasks/1&quot;
-              */
             }
           }
         }
@@ -697,7 +710,7 @@ data:
               create_from_template(tasks_prod_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
                 _${prefix_label}_ &quot;${gb_destination}-&quot; \
                 _${acr_secret_name_label}_ ${acr_secret_name} \
-                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${version}
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${prod_tag}
               &quot;&quot;&quot;)
             }
           }
@@ -782,4 +795,3 @@ data:
       <triggers/>
       <disabled>false</disabled>
     </flow-definition>
-
