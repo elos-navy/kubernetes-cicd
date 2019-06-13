@@ -260,7 +260,7 @@ data:
           _RESOURCE_NAME_ &quot;${name_prefix}application-dev&quot; \
           _DNS_NAME_ &quot;application-dev.${dns_domain}&quot; \
           _NAMESPACE_ &quot;${app_dev_namespace}&quot; \
-          _SERVICE_NAME_ &quot;tasks&quot; \
+          _SERVICE_NAME_ &quot;${name_prefix}tasks&quot; \
           _SERVICE_PORT_ 8080
         &quot;&quot;&quot;
         
