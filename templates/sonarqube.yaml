@@ -37,7 +37,7 @@ spec:
         app: _PREFIX_sonarqube
     spec:
       containers:
-      - image: wkulhanek/sonarqube:6.7.4
+      - image: docker.io/sonarqube:lts
         imagePullPolicy: IfNotPresent
         name: sonarqube
         resources: {}
