@@ -58,7 +58,7 @@ function create_docker_repo {
 {
   "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createDockerHosted('$NAME',$PORT,null)"
+  "content": "repository.createDockerHosted('$NAME', $PORT, null)"
 }
 EOM
 
@@ -73,7 +73,7 @@ function create_npm_proxy {
 {
   "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createNpmProxy('$NAME','$URL')"
+  "content": "repository.createNpmProxy('$NAME', '$URL')"
 }
 EOM
 
@@ -88,7 +88,7 @@ function create_maven_proxy {
 {
   "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createMavenProxy('$NAME','$URL')"
+  "content": "repository.createMavenProxy('$NAME', '$URL')"
 }
 EOM
 
@@ -125,8 +125,8 @@ EOM
 }
 
 create_docker_repo docker 5000
-create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
-create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
+create_maven_proxy rh-ga https://maven.repository.redhat.com/ga/
+create_maven_group mvn-all redhat-ga,maven-central,maven-releases,maven-snapshots
 create_npm_proxy npm https://registry.npmjs.org/
 create_release_repo releases
 
