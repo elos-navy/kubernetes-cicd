@@ -25,7 +25,7 @@ done
 
 
 function add_api_script {
-  PAYLOAD=$1
+  PAYLOAD=$@
 
   curl -v \
     -H "Accept: application/json" \
