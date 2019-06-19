@@ -45,6 +45,11 @@ function run_api_script {
     "${NEXUS_URL}/service/rest/v1/script/${SCRIPT_NAME}/run"
 }
 
+function execute_api_script {
+  add_api_script $1
+  run_api_script $2
+}
+
 function create_docker_repo {
   NAME=$1
   PORT=$2
@@ -57,8 +62,7 @@ function create_docker_repo {
 }
 EOM
 
-  add_api_script $PAYLOAD
-  run_api_script $NAME
+  execute_api_script $PAYLOAD $NAME
 }
 
 function create_npm_proxy {
@@ -73,8 +77,7 @@ function create_npm_proxy {
 }
 EOM
 
-  add_api_script $PAYLOAD
-  run_api_script $NAME
+  execute_api_script $PAYLOAD $NAME
 }
 
 function create_maven_proxy {
@@ -89,8 +92,7 @@ function create_maven_proxy {
 }
 EOM
 
-  add_api_script $PAYLOAD
-  run_api_script $NAME
+  execute_api_script $PAYLOAD $NAME
 }
 
 function create_maven_group {
@@ -105,14 +107,13 @@ function create_maven_group {
 }
 EOM
 
-  add_api_script $PAYLOAD
-  run_api_script $NAME
+  execute_api_script $PAYLOAD $NAME
 }
 
 function create_release_repo {
   NAME=$1
 
-  read -r -d '' PAYLOAD << EOM
+  read -r -d '' PAYLOAD <<- EOM
 {
   "name": "$NAME",
   "type": "groovy",
@@ -120,33 +121,12 @@ function create_release_repo {
 }
 EOM
 
-  add_api_script $PAYLOAD
-  run_api_script $NAME
-
+  execute_api_script $PAYLOAD $NAME
 }
 
-
-# Red Hat Proxy Repos
-#add_nexus3_proxy_repo redhat-ga https://maven.repository.redhat.com/ga/
-
-#REPO_NAME='redhat-ga'
-#REPO_URL='https://maven.repository.redhat.com/ga/'
-create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
-
-
-# Repo Group to include all proxy repos
-#add_nexus3_group_proxy_repo redhat-ga,maven-central,maven-releases,maven-snapshots maven-all-public
-create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
-
-
-# NPM Proxy Repo
-#add_nexus3_npmproxy_repo npm https://registry.npmjs.org/
-create_npm_proxy npm https://registry.npmjs.org/
-
-# Private Docker Registry
-#add_nexus3_docker_repo docker 5000
 create_docker_repo docker 5000
-
-# Maven release Repo
-#add_nexus3_release_repo releases
+create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
+create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
+create_npm_proxy npm https://registry.npmjs.org/
 create_release_repo releases
+
