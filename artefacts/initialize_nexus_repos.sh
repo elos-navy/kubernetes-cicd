@@ -46,8 +46,8 @@ function run_api_script {
 }
 
 function execute_api_script {
-  add_api_script $1
-  run_api_script $2
+  add_api_script "$1"
+  run_api_script "$2"
 }
 
 function create_docker_repo {
@@ -62,7 +62,7 @@ function create_docker_repo {
 }
 EOM
 
-  execute_api_script $PAYLOAD $NAME
+  execute_api_script "$PAYLOAD" "$NAME"
 }
 
 function create_npm_proxy {
@@ -77,7 +77,7 @@ function create_npm_proxy {
 }
 EOM
 
-  execute_api_script $PAYLOAD $NAME
+  execute_api_script "$PAYLOAD" "$NAME"
 }
 
 function create_maven_proxy {
@@ -92,7 +92,7 @@ function create_maven_proxy {
 }
 EOM
 
-  execute_api_script $PAYLOAD $NAME
+  execute_api_script "$PAYLOAD" "$NAME"
 }
 
 function create_maven_group {
@@ -107,7 +107,7 @@ function create_maven_group {
 }
 EOM
 
-  execute_api_script $PAYLOAD $NAME
+  execute_api_script "$PAYLOAD" "$NAME"
 }
 
 function create_release_repo {
@@ -121,7 +121,7 @@ function create_release_repo {
 }
 EOM
 
-  execute_api_script $PAYLOAD $NAME
+  execute_api_script "$PAYLOAD" "$NAME"
 }
 
 create_docker_repo docker 5000
