@@ -23,15 +23,8 @@ do
   esac
 done
 
-#
-# Configure Nexus3 after installation
-#
-# Call this script with parameters:
-#   $1: Nexus UserID
-#   $2: Nexus Password
-#   $3: Nexus URL
 
-function add_nexus_api_script {
+function add_api_script {
   PAYLOAD=$1
 
   curl -v \
@@ -42,7 +35,7 @@ function add_nexus_api_script {
     "${NEXUS_URL}/service/rest/v1/script/"
 }
 
-function run_nexus_api_script {
+function run_api_script {
   SCRIPT_NAME=$1
 
   curl -v \
@@ -61,9 +54,6 @@ function add_nexus3_npmproxy_repo() {
   local _REPO_ID=$1
   local _REPO_URL=$2
 
-  local _NEXUS_PWD=$4
-  local _NEXUS_URL=$5
-
   read -r -d '' _REPO_JSON << EOM
 {
   "name": "$_REPO_ID",
@@ -75,8 +65,8 @@ EOM
 #  curl -v -H "Accept: application/json" -H "Content-Type: application/json" -d "$_REPO_JSON" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/"
 #  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
 
-  add_nexus_api_script $_REPO_JSON
-  run_nexus_api_script $_REPO_ID
+  add_api_script $_REPO_JSON
+  run_api_script $_REPO_ID
 }
 
 #
@@ -86,8 +76,6 @@ EOM
 function add_nexus3_proxy_repo() {
   local _REPO_ID=$1
   local _REPO_URL=$2
-  local _NEXUS_PWD=$4
-  local _NEXUS_URL=$5
 
   read -r -d '' _REPO_JSON << EOM
 {
@@ -102,8 +90,8 @@ EOM
 
   #run_nexus_api_script $_REPO_JSON $_REPO_ID
 
-  add_nexus_api_script $_REPO_JSON
-  run_nexus_api_script $_REPO_ID
+  add_api_script $_REPO_JSON
+  run_api_script $_REPO_ID
 
 }
 
@@ -113,8 +101,6 @@ EOM
 #
 function add_nexus3_release_repo() {
   local _REPO_ID=$1
-  local _NEXUS_PWD=$3
-  local _NEXUS_URL=$4
 
   # Repository createMavenHosted(final String name,
   #                                final String blobStoreName,
@@ -135,8 +121,8 @@ EOM
 #  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
 
   #run_nexus_api_script $_REPO_JSON $_REPO_ID
-  add_nexus_api_script $_REPO_JSON
-  run_nexus_api_script $_REPO_ID
+  add_api_script $_REPO_JSON
+  run_api_script $_REPO_ID
 
 }
 
@@ -146,8 +132,6 @@ EOM
 function add_nexus3_group_proxy_repo() {
   local _REPO_IDS=$1
   local _GROUP_ID=$2
-  local _NEXUS_PWD=$4
-  local _NEXUS_URL=$5
 
   read -r -d '' _REPO_JSON << EOM
 {
@@ -161,8 +145,8 @@ EOM
 #  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_GROUP_ID/run"
 
   #run_nexus_api_script $_REPO_JSON $_GROUP_ID
-  add_nexus_api_script $_REPO_JSON
-  run_nexus_api_script $_GROUP_ID
+  add_api_script $_REPO_JSON
+  run_api_script $_GROUP_ID
 
 }
 
@@ -173,8 +157,6 @@ EOM
 function add_nexus3_docker_repo() {
   local _REPO_ID=$1
   local _REPO_PORT=$2
-  local _NEXUS_PWD=$4
-  local _NEXUS_URL=$5
 
   read -r -d '' _REPO_JSON << EOM
 {
@@ -188,8 +170,8 @@ EOM
 #  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
 
   #run_nexus_api_script $_REPO_JSON $_REPO_ID
-  add_nexus_api_script $_REPO_JSON
-  run_nexus_api_script $_REPO_ID
+  add_api_script $_REPO_JSON
+  run_api_script $_REPO_ID
 
 }
 
