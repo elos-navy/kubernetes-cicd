@@ -45,153 +45,108 @@ function run_api_script {
     "${NEXUS_URL}/service/rest/v1/script/${SCRIPT_NAME}/run"
 }
 
-#
-# Add a NPM Proxy Repo to Nexus3
-# add_nexus3_proxy_repo [repo-id] [repo-url] [nexus-username] [nexus-password] [nexus-url]
-#
-function add_nexus3_npmproxy_repo() {
+function create_docker_repo {
+  NAME=$1
+  PORT=$2
 
-  local _REPO_ID=$1
-  local _REPO_URL=$2
-
-  read -r -d '' _REPO_JSON << EOM
+  read -r -d '' PAYLOAD <<- EOM
 {
-  "name": "$_REPO_ID",
+  "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createNpmProxy('$_REPO_ID','$_REPO_URL')"
+  "content": "repository.createDockerHosted('$NAME',$PORT,null)"
 }
 EOM
 
-#  curl -v -H "Accept: application/json" -H "Content-Type: application/json" -d "$_REPO_JSON" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/"
-#  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
-
-  add_api_script $_REPO_JSON
-  run_api_script $_REPO_ID
+  add_api_script $PAYLOAD
+  run_api_script $NAME
 }
 
-#
-# Add a Proxy Repo to Nexus3
-# add_nexus3_proxy_repo [repo-id] [repo-url] [nexus-username] [nexus-password] [nexus-url]
-#
-function add_nexus3_proxy_repo() {
-  local _REPO_ID=$1
-  local _REPO_URL=$2
+function create_npm_proxy {
+  NAME=$1
+  URL=$2
 
-  read -r -d '' _REPO_JSON << EOM
+  read -r -d '' PAYLOAD <<- EOM
 {
-  "name": "$_REPO_ID",
+  "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createMavenProxy('$_REPO_ID','$_REPO_URL')"
+  "content": "repository.createNpmProxy('$NAME','$URL')"
 }
 EOM
 
-#  curl -v -H "Accept: application/json" -H "Content-Type: application/json" -d "$_REPO_JSON" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/"
-#  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
-
-  #run_nexus_api_script $_REPO_JSON $_REPO_ID
-
-  add_api_script $_REPO_JSON
-  run_api_script $_REPO_ID
-
+  add_api_script $PAYLOAD
+  run_api_script $NAME
 }
 
-#
-# Add a Release Repo to Nexus3
-# add_nexus3_release_repo [repo-id] [nexus-username] [nexus-password] [nexus-url]
-#
-function add_nexus3_release_repo() {
-  local _REPO_ID=$1
+function create_maven_proxy {
+  NAME=$1
+  URL=$2
 
-  # Repository createMavenHosted(final String name,
-  #                                final String blobStoreName,
-  #                                final boolean strictContentTypeValidation,
-  #                                final VersionPolicy versionPolicy,
-  #                                final WritePolicy writePolicy,
-  #                                final LayoutPolicy layoutPolicy);
-
-  read -r -d '' _REPO_JSON << EOM
+  read -r -d '' PAYLOAD <<- EOM
 {
-  "name": "$_REPO_ID",
+  "name": "$NAME",
   "type": "groovy",
-  "content": "import org.sonatype.nexus.blobstore.api.BlobStoreManager\nimport org.sonatype.nexus.repository.storage.WritePolicy\nimport org.sonatype.nexus.repository.maven.VersionPolicy\nimport org.sonatype.nexus.repository.maven.LayoutPolicy\nrepository.createMavenHosted('$_REPO_ID',BlobStoreManager.DEFAULT_BLOBSTORE_NAME, false, VersionPolicy.RELEASE, WritePolicy.ALLOW, LayoutPolicy.PERMISSIVE)"
+  "content": "repository.createMavenProxy('$NAME','$URL')"
 }
 EOM
 
-#  curl -v -H "Accept: application/json" -H "Content-Type: application/json" -d "$_REPO_JSON" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/"
-#  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
-
-  #run_nexus_api_script $_REPO_JSON $_REPO_ID
-  add_api_script $_REPO_JSON
-  run_api_script $_REPO_ID
-
+  add_api_script $PAYLOAD
+  run_api_script $NAME
 }
 
-#
-# add_nexus3_group_proxy_repo [comma-separated-repo-ids] [group-id] [nexus-username] [nexus-password] [nexus-url]
-#
-function add_nexus3_group_proxy_repo() {
-  local _REPO_IDS=$1
-  local _GROUP_ID=$2
+function create_maven_group {
+  NAME=$1
+  REPOS=$2
 
-  read -r -d '' _REPO_JSON << EOM
+  read -r -d '' PAYLOAD <<- EOM
 {
-  "name": "$_GROUP_ID",
+  "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createMavenGroup('$_GROUP_ID', '$_REPO_IDS'.split(',').toList())"
+  "content": "repository.createMavenGroup('$NAME', '$REPOS'.split(',').toList())"
 }
 EOM
 
-#  curl -v -H "Accept: application/json" -H "Content-Type: application/json" -d "$_REPO_JSON" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/"
-#  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_GROUP_ID/run"
-
-  #run_nexus_api_script $_REPO_JSON $_GROUP_ID
-  add_api_script $_REPO_JSON
-  run_api_script $_GROUP_ID
-
+  add_api_script $PAYLOAD
+  run_api_script $NAME
 }
 
-#
-# Add a Docker Registry Repo to Nexus3
-# add_nexus3_docker_repo [repo-id] [repo-port] [nexus-username] [nexus-password] [nexus-url]
-#
-function add_nexus3_docker_repo() {
-  local _REPO_ID=$1
-  local _REPO_PORT=$2
+function create_release_repo {
+  NAME=$1
 
-  read -r -d '' _REPO_JSON << EOM
+  read -r -d '' PAYLOAD << EOM
 {
-  "name": "$_REPO_ID",
+  "name": "$NAME",
   "type": "groovy",
-  "content": "repository.createDockerHosted('$_REPO_ID',$_REPO_PORT,null)"
+  "content": "import org.sonatype.nexus.blobstore.api.BlobStoreManager\nimport org.sonatype.nexus.repository.storage.WritePolicy\nimport org.sonatype.nexus.repository.maven.VersionPolicy\nimport org.sonatype.nexus.repository.maven.LayoutPolicy\nrepository.createMavenHosted('$NAME',BlobStoreManager.DEFAULT_BLOBSTORE_NAME, false, VersionPolicy.RELEASE, WritePolicy.ALLOW, LayoutPolicy.PERMISSIVE)"
 }
 EOM
 
-#  curl -v -H "Accept: application/json" -H "Content-Type: application/json" -d "$_REPO_JSON" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/"
-#  curl -v -X POST -H "Content-Type: text/plain" -u "$NEXUS_USER:$_NEXUS_PWD" "${_NEXUS_URL}/service/rest/v1/script/$_REPO_ID/run"
-
-  #run_nexus_api_script $_REPO_JSON $_REPO_ID
-  add_api_script $_REPO_JSON
-  run_api_script $_REPO_ID
+  add_api_script $PAYLOAD
+  run_api_script $NAME
 
 }
 
-# Main body of the script
-# $1: Nexus3 User ID
-# $2: Nexus3 Password
-# $3: Nexus3 URL
 
 # Red Hat Proxy Repos
-add_nexus3_proxy_repo redhat-ga https://maven.repository.redhat.com/ga/
-#add_nexus3_proxy_repo jboss https://repository.jboss.org/nexus/content/groups/public/ $1 $2 $3
+#add_nexus3_proxy_repo redhat-ga https://maven.repository.redhat.com/ga/
+
+#REPO_NAME='redhat-ga'
+#REPO_URL='https://maven.repository.redhat.com/ga/'
+create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
+
 
 # Repo Group to include all proxy repos
-#add_nexus3_group_proxy_repo redhat-ga,jboss,maven-central,maven-releases,maven-snapshots maven-all-public $1 $2 $3
-add_nexus3_group_proxy_repo redhat-ga,maven-central,maven-releases,maven-snapshots maven-all-public $1 $2 $3
+#add_nexus3_group_proxy_repo redhat-ga,maven-central,maven-releases,maven-snapshots maven-all-public
+create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
+
 
 # NPM Proxy Repo
-add_nexus3_npmproxy_repo npm https://registry.npmjs.org/
+#add_nexus3_npmproxy_repo npm https://registry.npmjs.org/
+create_npm_proxy npm https://registry.npmjs.org/
+
 # Private Docker Registry
-add_nexus3_docker_repo docker 5000
+#add_nexus3_docker_repo docker 5000
+create_docker_repo docker 5000
 
 # Maven release Repo
-add_nexus3_release_repo releases
+#add_nexus3_release_repo releases
+create_release_repo releases
