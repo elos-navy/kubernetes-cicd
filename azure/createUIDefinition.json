@@ -1,0 +1,202 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+    "handler": "Microsoft.Compute.MultiVm",
+    "version": "0.1.2-preview",
+    "parameters": {
+        "basics": [
+            {
+                "name": "infoBox",
+                "type": "Microsoft.Common.InfoBox",
+                "options": {
+                    "icon": "None",
+                    "text": "Dear customer, thanks for Your interest in our reference offering of CI/CD tool chain and a sample pipeline."
+                }
+            },
+            {
+                "name": "servicePrincipalAppId",
+                "type": "Microsoft.Common.PasswordBox",
+                "label":
+                {
+                    "password": "Service Principal Client ID",
+                    "confirmPassword": "Confirm password"
+                },
+                "toolTip": "Kubernetes cluster might need to provision Azure resources on your behalf. This is a ID for a Service Principal of your registered application (please refer to documation for further details).",
+                "constraints": {
+                    "required": true
+                },
+                "options": {
+                    "hideConfirmation": true
+                },
+                "visible": true
+            },
+            {
+                "name": "servicePrincipalAppKey",
+                "type": "Microsoft.Common.PasswordBox",
+                "label":
+                {
+                    "password": "Service Principal Client Secret",
+                    "confirmPassword": "Confirm password"
+                },
+                "toolTip": "Kubernetes cluster might need to provision Azure resources on your behalf. This is a ID for a Service Principal of your registered application (please refer to documation for further details).",
+                "constraints": {
+                    "required": true
+                },
+                "options": {
+                    "hideConfirmation": true
+                },
+                "visible": true
+            },
+            {
+                "name": "acrSku",
+                "type": "Microsoft.Common.DropDown",
+                "label": "ACR SKU",
+                "defaultValue": "Basic",
+                "toolTip": "",
+                "constraints": {
+                    "allowedValues": [
+                      {
+                        "label": "Basic",
+                        "value": "Basic"
+                      },
+                      {
+                        "label": "Standard",
+                        "value": "Standard"
+                      },
+                      {
+                        "label": "Premium",
+                        "value": "Premium"      
+                      }
+                    ],
+                    "required": true
+                },
+                "visible": true
+            }
+        ],
+        "steps": [
+
+            {
+                "name": "AuxVM",
+                "label": "Auxiliary VM",
+                "elements": [
+                    {
+                        "name": "sshPublicKey",
+                        "type": "Microsoft.Compute.CredentialsCombo",
+                        "label": {
+                            "sshPublicKey": "SSH key for AuxVM",
+                            "authenticationType": "",
+                            "confirmPassword": "",
+                            "password": ""
+                        },
+                        "constraints": {
+                            "required": true
+                        },
+                        "options": {
+                            "hideConfirmation": false,
+                            "hidePassword": true
+                        },
+                        "osPlatform": "Linux"
+                    },
+                    {
+                        "name": "vmSize",
+                        "type": "Microsoft.Compute.SizeSelector",
+                        "label": "Auxiliary VM size",
+                        "toolTip": "The size of virtual machine to provision for bootstraping AKS and Jenkins service.",
+                        "recommendedSizes": [
+                            "Standard_D2_v2",
+                            "Standard_A2_v2"
+                        ],
+                        "osPlatform": "Linux",
+                        "count": "1"
+                    }
+                ]
+            },
+            {
+                "name": "K8sClusterConfig",
+                "label": "Kubernetes Cluster",
+                "elements": [
+                    {
+                        "name": "kubernetesVersion",
+                        "type": "Microsoft.Common.DropDown",
+                        "label": "kubernetesVersion",
+                        "defaultValue": "",
+                        "toolTip": "",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "1.13.5",
+                                    "value": "1.13.5"
+                                }
+                            ],
+                            "required": true
+                        },
+                        "visible": true
+                    },
+                    {
+                        "name": "nodeSize",
+                        "type": "Microsoft.Compute.SizeSelector",
+                        "label": "Kubernetes cluster worker node size",
+                        "toolTip": "The size of virtual machine to provision for Kubernetes cluster worker node.",
+                        "recommendedSizes": [
+                            "Standard_D2_v2",
+                            "Standard_A2_v2"
+                        ],
+                        "osPlatform": "Linux",
+                        "count": "1"
+                    }
+                ]
+            },
+
+            {
+                "name": "Jenkins",
+                "label": "Jenkins",
+                "elements": [
+                    {
+                        "name": "jenkinsAdminPassword",
+                        "type": "Microsoft.Common.PasswordBox",
+                        "label": {
+                            "password": "Password",
+                            "confirmPassword": "Confirm password"
+                        },
+                        "toolTip": "Jenkins admin user password.",
+                        "constraints": {
+                            "required": true,
+                            "regex": "",
+                            "validationMessage": ""
+                        },
+                        "options": {
+                            "hideConfirmation": false
+                        },
+                        "visible": true
+                    }
+                ]
+            },
+            {
+                "name": "Application",
+                "label": "Application",
+                "elements": [
+                    {
+                        "name": "applicationGitUrl",
+                        "type":"Microsoft.Common.TextBox",
+                        "label": "Application GIT repository URL",
+                        "toolTip": "GIT repository URL with application sources.",
+                        "constraints": {
+                            "required": true
+                        }
+                    }
+                ]
+            }
+        ],
+        "outputs": {
+            "location": "[location()]",
+            "servicePrincipalAppId": "[basics('servicePrincipalAppId')]",
+            "servicePrincipalAppKey": "[basics('servicePrincipalAppKey')]",
+            "acrSku": "[basics('acrSku')]",
+            "jenkinsAdminPassword": "[steps('Jenkins').jenkinsAdminPassword]",
+            "applicationGitUrl": "[steps('Application').applicationGitUrl]",
+            "auxvmSshPublicKey": "[steps('AuxVM').sshPublicKey]",
+            "auxvmSize": "[steps('AuxVM').vmSize]",
+            "kubernetesVersion": "[steps('K8sClusterConfig').kubernetesVersion]",
+            "kubernetesNodeSize": "[steps('K8sClusterConfig').nodeSize]"
+        }
+    }
+}
