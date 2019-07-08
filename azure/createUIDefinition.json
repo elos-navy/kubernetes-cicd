@@ -178,6 +178,7 @@
                         "name": "applicationGitUrl",
                         "type":"Microsoft.Common.TextBox",
                         "label": "Application GIT repository URL",
+                        "defaultValue": "https://github.com/elos-tech/openshift-cicd-app",
                         "toolTip": "GIT repository URL with application sources.",
                         "constraints": {
                             "required": true
