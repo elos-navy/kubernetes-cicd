@@ -14,6 +14,14 @@
 
 sudo -u root ./scripts/aks/bootstrap.sh "$@" &> /deployment.log
 
-# Stdout should go to ARM deployment output. This is the only output
-# of this script!
+# In case bootstrap script will fail, this script deployment should fail too.
+# This will result in failed deployment in user portal.
+if [ $? -ne 0 ]; then
+  echo '_DEPLOYMENT_ERROR_'
+  exit 1
+fi
+
+# Stdout should go to ARM deployment output. This must be the only output
+# of this script! It's processed by ARM template creation process and used
+# for providing application domain to output for user.
 cat /http_application_routing_zone

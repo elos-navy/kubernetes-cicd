@@ -2,6 +2,15 @@
 
 source ./scripts/config
 
+function handle_error {
+  RET=$?
+
+  if [ $RET -ne 0 ]; then
+    echo "Error: $1"
+    exit $RET
+  fi
+}
+
 function create_from_template {
   FILE=$1; shift
   

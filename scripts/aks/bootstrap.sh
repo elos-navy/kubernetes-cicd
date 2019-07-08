@@ -63,13 +63,17 @@ install_az
 sudo apt-get install --yes jq
 
 az login --service-principal -u "$APP_ID" -p "$APP_KEY" -t "$TENANT_ID"
-az account set --subscription "$SUBSCRIPTION_ID"
-az aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --admin
+handle_error "Unable to login with service principal credentials!"
 
-kubectl get nodes || {
-  echo "Error: kubectl not configured correctly. Not connected to cluster!"
-  exit 0
-}
+az account set --subscription "$SUBSCRIPTION_ID"
+handle_error "Unable to set to subscription ${SUBSCRIPTION_ID}"
+
+az aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --admin
+handle_error "Unable to set credentials!"
+
+kubectl get nodes
+handle_error "kubectl not configured correctly. Not connected to cluster!"
+
 
 # Enable App routing addon and obtain DNS zone name.
 # Store zone name for command to return it to ARM deployment output.
