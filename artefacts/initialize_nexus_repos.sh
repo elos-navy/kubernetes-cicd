@@ -22,6 +22,10 @@ do
     --connection_check|-c)
       CONNECTION_CHECK=1
       ;;
+    --new_admin_password)
+      NEW_ADMIN_PASSWORD="$1"
+      shift
+      ;;
     *)
       echo "ERROR: Unknown argument '$KEY' to script '$0'" 1>&2
       exit -1
@@ -60,6 +64,33 @@ function connection_check {
 function execute_api_script {
   add_api_script "$1"
   run_api_script "$2"
+}
+
+function change_admin_password {
+  NAME='change_admin_password'
+  NEW_ADMIN_PASSWORD="$1"
+
+  read -r -d '' PAYLOAD <<- EOM
+{
+  "name": "$NAME",
+  "type": "groovy",
+  "content": "security.securitySystem.changePassword('admin', args)"
+}
+EOM
+
+  add_api_script "$PAYLOAD"
+
+  CHECK_RUN_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" \
+    -H "Content-Type: text/plain" \
+    -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
+    -d "${NEW_ADMIN_PASSWORD}" \
+    "${NEXUS_URL}/service/rest/v1/script/${NAME}/run")
+
+  if [ "${CHECK_RUN_STATUS}" == "200" ];then
+    NEXUS_PASSWORD="$NEW_ADMIN_PASSWORD"
+  else
+    echo "Error occured on admin password change: ${CHECK_RUN_STATUS}"
+  fi
 }
 
 function create_docker_repo {
@@ -138,6 +169,11 @@ EOM
 
 if [ "$CONNECTION_CHECK" -eq 1 ]; then
   connection_check
+fi
+
+if [ ! -z "$NEW_ADMIN_PASSWORD" ]; then
+  echo "Changing admin password..."
+  change_admin_password "$NEW_ADMIN_PASSWORD"
 fi
 
 #create_docker_repo docker 5000
