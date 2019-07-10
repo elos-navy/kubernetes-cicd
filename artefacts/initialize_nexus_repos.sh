@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+CONNECTION_CHECK=0
+
 while [[ $# > 0 ]]
 do
   KEY="$1"
@@ -15,6 +17,10 @@ do
       ;;
     --url|-l)
       NEXUS_URL="$1"
+      shift
+      ;;
+    --connection_check|-c)
+      CONNECTION_CHECK=1
       shift
       ;;
     *)
@@ -43,6 +49,13 @@ function run_api_script {
     -H "Content-Type: text/plain" \
     -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
     "${NEXUS_URL}/service/rest/v1/script/${SCRIPT_NAME}/run"
+}
+
+function connection_check {
+  curl -v \
+    -X GET \
+    "${NEXUS_URL}"
+  exit $?
 }
 
 function execute_api_script {
@@ -123,6 +136,10 @@ EOM
 
   execute_api_script "$PAYLOAD" "$NAME"
 }
+
+if [ "$CONNECTION_CHECK" -eq 1 ]; then
+  connection_check
+fi
 
 #create_docker_repo docker 5000
 create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
