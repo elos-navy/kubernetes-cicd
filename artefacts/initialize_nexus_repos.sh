@@ -174,6 +174,7 @@ fi
 if [ ! -z "$NEW_ADMIN_PASSWORD" ]; then
   echo "Changing admin password..."
   change_admin_password "$NEW_ADMIN_PASSWORD"
+  exit 0
 fi
 
 #create_docker_repo docker 5000
