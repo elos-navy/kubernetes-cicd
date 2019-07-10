@@ -183,11 +183,12 @@ data:
     def source_git_repo      = &apos;https://github.com/elos-tech/kubernetes-cicd.git&apos;
     def name_prefix          = &apos;cicd-&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
-    def dns_domain           = &apos;_DNS_ZONE_NAME_&apos;
+    def dns_domain           = &apos;3964355ce42d4ce2b59d.westeurope.aksapp.io&apos;
     def jenkins_namespace    = &quot;${name_prefix}jenkins&quot;
     def components_namespace = &quot;${name_prefix}components&quot;
     def app_dev_namespace    = &quot;${name_prefix}tasks-dev&quot;
     def app_prod_namespace   = &quot;${name_prefix}tasks-prod&quot;
+    def nexus_admin_password = &apos;admin123&apos;
     
     node {
       stage(&apos;Cleanup&apos;) {
@@ -214,20 +215,64 @@ data:
           _SERVICE_PORT_ 8081
         &quot;&quot;&quot;
         wait_for_deployment_ready(components_namespace, &quot;${name_prefix}nexus3&quot;)
-        
-        // Initialize Nexus
+    
+        // Get nexus pod name    
         def pod_name = get_pod_name(components_namespace, &quot;${name_prefix}nexus3&quot;)
+        
+        // Wait till nexus service API is available
         sh &quot;&quot;&quot;
           kubectl --namespace ${components_namespace} cp artefacts/initialize_nexus_repos.sh $pod_name:/tmp/
+          #kubectl --namespace ${components_namespace} cp artefacts/setup_nexus3.sh $pod_name:/tmp/
           
           FAILED=0
           while true
           do
-            kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash /tmp/initialize_nexus_repos.sh --user admin --password admin123 --url http://localhost:8081 || FAILED=1
+            kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash \
+              /tmp/initialize_nexus_repos.sh \
+                --connection_check \
+                --url http://localhost:8081 || FAILED=1
+    
             [ \$FAILED -eq 0 ] &amp;&amp; break
             FAILED=0
             sleep 10
           done
+        &quot;&quot;&quot;
+        
+        // Nexus API is accessible here.
+        
+        // Get nexus admin password
+        //nexus_admin_password = sh (
+        //  script: &quot;kubectl --namespace ${components_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password&quot;,
+        //  returnStdout: true
+        //).trim()
+        
+        // Change admin password to standard one. This will maybe change
+        // in future releases, but for now let&apos;s use standard admin pasword
+        // admin123.
+        sh &quot;&quot;&quot;
+          ADMIN_PASSWORD=\$(kubectl --namespace ${components_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password)
+          
+          kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash \
+            /tmp/initialize_nexus_repos.sh \
+              --user admin \
+              --password \$ADMIN_PASSWORD \
+              --new_admin_password &apos;${nexus_admin_password}&apos; \
+              --url http://localhost:8081 || {
+                  echo &quot;Error! Change of admin password failed!&quot;
+                  exit 1
+                }
+        &quot;&quot;&quot;
+        
+        // Initialize nexus repositories
+        sh &quot;&quot;&quot;
+          kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash \
+            /tmp/initialize_nexus_repos.sh \
+              --user admin \
+              --password &apos;${nexus_admin_password}&apos; \
+              --url http://localhost:8081 || {
+                  echo &quot;Error! Initialization of nexus repositories failed!&quot;
+                  exit 1
+                }
         &quot;&quot;&quot;
       }
       
@@ -287,7 +332,8 @@ data:
       }
       
       stage(&apos;Start Application Pipeline&apos;) {
-        build job: &quot;cicd-app-pipeline&quot;, wait: false
+        build job: &quot;cicd-app-pipeline&quot;,
+          wait: false
       }
     }
     
@@ -396,11 +442,11 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
-    def prefix               = &apos;_PREFIX_&apos;
-    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
-    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def prefix               = &apos;cicd-&apos;
+    def acr_hostname         = &apos;acrolfs6repinhb6.azurecr.io&apos;
+    def acr_secret_name      = &apos;acr-secret&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
-    def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
+    def git_repo_url         = &apos;https://github.com/elos-tech/openshift-cicd-app&apos;
     
     // Helper variable for prefix substitution with double sed-ed templates.
     def prefix_label          = &apos;PREFIX&apos;
@@ -417,7 +463,8 @@ data:
     def tasks_dev_url        = &quot;http://${prefix}tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;
     //def tasks_prod_url       = &quot;http://${prefix}tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
     
-    def mvnCmd               = &apos;mvn -s ./nexus_openshift_settings.xml&apos;
+    def maven_config_file    = &apos;nexus_openshift_settings.xml&apos;
+    def mvnCmd               = &quot;mvn -s ./${maven_config_file}&quot;
     
     // Blue/Green deployment in production
     def gb_destination       = &apos;green&apos;
@@ -500,7 +547,7 @@ data:
         def groupId    = null
         def artifactId = null
         def version    = null
-    
+        
         def dev_tag    = null
         def prod_tag   = null
       }
@@ -527,7 +574,13 @@ data:
                 extensions: [],
                 submoduleCfg: [],
                 userRemoteConfigs: [[url: git_repo_url]]])
-                    
+            }
+          }
+        }
+        
+        stage(&apos;Setup maven configuration&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
               // Set global variables according the code from SCM
               script {
                 groupId    = getGroupIdFromPom(&quot;pom.xml&quot;)
@@ -539,7 +592,11 @@ data:
               }
               
               // Setup correct URL to nexus service in config XML file.
-              sh &quot;sed -i &apos;s@&lt;url&gt;http://.*:8081@&lt;url&gt;${nexus_url}@&apos; nexus_openshift_settings.xml&quot;
+              sh &quot;sed -i &apos;s@&lt;url&gt;http://.*:8081@&lt;url&gt;${nexus_url}@&apos; ${maven_config_file}&quot;
+              
+              // Set current nexus admin password in maven config for uploading artefacts
+              // to nexus repos.
+              //sh &quot;sed -i &apos;s@&lt;password&gt;.*&lt;/password&gt;@&lt;password&gt;${nexus_admin_password}&lt;/password&gt;@&apos; ${maven_config_file}&quot;
             }
           }
         }
