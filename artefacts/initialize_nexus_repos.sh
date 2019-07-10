@@ -140,9 +140,9 @@ if [ "$CONNECTION_CHECK" -eq 1 ]; then
   connection_check
 fi
 
-create_docker_repo docker 5000
-#create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
-#create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
-#create_npm_proxy npm https://registry.npmjs.org/
-#create_release_repo releases
+#create_docker_repo docker 5000
+create_maven_proxy redhat-ga https://maven.repository.redhat.com/ga/
+create_maven_group maven-all-public redhat-ga,maven-central,maven-releases,maven-snapshots
+create_npm_proxy npm https://registry.npmjs.org/
+create_release_repo releases
 
