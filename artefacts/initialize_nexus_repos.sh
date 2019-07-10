@@ -21,7 +21,6 @@ do
       ;;
     --connection_check|-c)
       CONNECTION_CHECK=1
-      shift
       ;;
     *)
       echo "ERROR: Unknown argument '$KEY' to script '$0'" 1>&2
