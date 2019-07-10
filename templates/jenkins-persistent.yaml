@@ -183,7 +183,7 @@ data:
     def source_git_repo      = &apos;https://github.com/elos-tech/kubernetes-cicd.git&apos;
     def name_prefix          = &apos;cicd-&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
-    def dns_domain           = &apos;3964355ce42d4ce2b59d.westeurope.aksapp.io&apos;
+    def dns_domain           = &apos;_DNS_ZONE_NAME_&apos;
     def jenkins_namespace    = &quot;${name_prefix}jenkins&quot;
     def components_namespace = &quot;${name_prefix}components&quot;
     def app_dev_namespace    = &quot;${name_prefix}tasks-dev&quot;
@@ -442,11 +442,11 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
-    def prefix               = &apos;cicd-&apos;
-    def acr_hostname         = &apos;acrolfs6repinhb6.azurecr.io&apos;
-    def acr_secret_name      = &apos;acr-secret&apos;
+    def prefix               = &apos;_PREFIX_&apos;
+    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
+    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
-    def git_repo_url         = &apos;https://github.com/elos-tech/openshift-cicd-app&apos;
+    def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
     
     // Helper variable for prefix substitution with double sed-ed templates.
     def prefix_label          = &apos;PREFIX&apos;
