@@ -459,7 +459,7 @@ data:
     def tasks_prod_namespace = &quot;${prefix}tasks-prod&quot;
     
     def sonarqube_url        = &quot;${prefix}sonarqube.${prefix}components.svc.cluster.local&quot;
-    def nexus_url            = &quot;http://${prefix}nexus3.${prefix}components.svc.cluster.local:8081&quot;
+    def nexus_url            = &quot;http://admin:admin123@${prefix}nexus3.${prefix}components.svc.cluster.local:8081&quot;
     def tasks_dev_url        = &quot;http://${prefix}tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;
     //def tasks_prod_url       = &quot;http://${prefix}tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
     
@@ -592,8 +592,8 @@ data:
               }
               
               // Setup correct URL to nexus service in config XML file.
-              sh &quot;sed -i &apos;s@&lt;url&gt;http://.*:8081@&lt;url&gt;${nexus_url}@&apos; ${maven_config_file}&quot;
-              
+              sh &quot;sed -i &apos;s;&lt;url&gt;http://.*:8081;&lt;url&gt;${nexus_url};&apos; ${maven_config_file}&quot;
+
               // Set current nexus admin password in maven config for uploading artefacts
               // to nexus repos.
               //sh &quot;sed -i &apos;s@&lt;password&gt;.*&lt;/password&gt;@&lt;password&gt;${nexus_admin_password}&lt;/password&gt;@&apos; ${maven_config_file}&quot;
