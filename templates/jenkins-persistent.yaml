@@ -395,7 +395,7 @@ data:
       sh &quot;&quot;&quot;
         while true;
         do
-          READY=\$(kubectl --namespace $namespace get deployment $deployment --no-headers | awk &apos;{ print \$5}&apos;)
+          READY=\$(kubectl --namespace $namespace get deployment $deployment -o=custom-columns=AVAILABLE:.status.availableReplicas --no-headers)
           echo \$READY
           if [ \$READY -ge 1 ]; then
             break
@@ -837,7 +837,7 @@ data:
       sh &quot;&quot;&quot;
         while true;
         do
-          READY=\$(kubectl --namespace $namespace get deployment $deployment --no-headers | awk &apos;{ print \$5}&apos;)
+          READY=\$(kubectl --namespace $namespace get deployment $deployment -o=custom-columns=AVAILABLE:.status.availableReplicas --no-headers)
           echo \$READY
           if [ \$READY -ge 1 ]; then
             break
