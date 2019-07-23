@@ -10,7 +10,7 @@ TMPDIR=$(mktemp -d)
 ZIPFILE='/tmp/cicd-app-marketplace.zip'
 
 cp azure/azuredeploy.json.nosecrets ${TMPDIR}/mainTemplate.json
-cp azure/createUiDefinition.json ${TMPDIR}/
+cp azure/createUIDefinition.json ${TMPDIR}/
 cp -r azure/nested ${TMPDIR}/
 
 cd ${TMPDIR}
