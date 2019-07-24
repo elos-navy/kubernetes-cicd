@@ -189,7 +189,6 @@
             }
         ],
         "outputs": {
-            "location": "[location()]",
             "servicePrincipalAppId": "[basics('servicePrincipalAppId')]",
             "servicePrincipalAppKey": "[basics('servicePrincipalAppKey')]",
             "acrSku": "[basics('acrSku')]",
