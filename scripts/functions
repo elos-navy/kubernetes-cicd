@@ -61,7 +61,7 @@ function wait_for_deployment_ready()
 
   while true
   do
-    COUNT=$(kubectl get deployment --no-headers -l $LABEL -n $NAMESPACE | awk '{ print $4 }')
+    COUNT=$(kubectl get deployment --no-headers -o=custom-columns=AVAILABLE:.status.availableReplicas -l $LABEL -n $NAMESPACE)
     [ $COUNT -gt 0 ] && break
     sleep 10
   done
@@ -104,7 +104,7 @@ function wait_for_ingress_controller_public_ip {
   COUNTER=1
   while true
   do
-    ROUTER_IP=$(kubectl get service -l app=nginx-ingress -n ${INGRESS_NAMESPACE} | grep LoadBalancer | awk '{ print $4 }')
+    ROUTER_IP=$(kubectl get service -o=custom-columns=LB_IP:.status.loadBalancer.ingress[*].ip,TYPE:.spec.type --no-headers -l app=nginx-ingress -n ${INGRESS_NAMESPACE} | grep LoadBalancer | awk '{ print $1 }' | head -n1)
     [ "$ROUTER_IP" != "<pending>" ] && break
     echo "Waiting for public IP of ingress router service. (#${COUNTER})"
     let COUNTER=$COUNTER+1
