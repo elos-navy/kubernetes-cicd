@@ -145,6 +145,7 @@ function install_cert_manager {
   # CA cluster issuer.
   # Wait till cluster issuer resource can be created.
   for i in $(seq 1 30)
+  do
     kubectl apply -f templates/ingress/cluster-issuer.yaml && break
     sleep 60
   done
