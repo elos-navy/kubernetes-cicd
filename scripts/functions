@@ -105,7 +105,7 @@ function wait_for_ingress_controller_public_ip {
   while true
   do
     ROUTER_IP=$(kubectl get service -o=custom-columns=LB_IP:.status.loadBalancer.ingress[*].ip,TYPE:.spec.type --no-headers -l app=nginx-ingress -n ${INGRESS_NAMESPACE} | grep LoadBalancer | awk '{ print $1 }' | head -n1)
-    [ "$ROUTER_IP" != "<pending>" ] && break
+    [ "$ROUTER_IP" != "<pending>" ] && [ "$ROUTER_IP" != "<none>" ] && break
     echo "Waiting for public IP of ingress router service. (#${COUNTER})"
     let COUNTER=$COUNTER+1
     sleep 10
