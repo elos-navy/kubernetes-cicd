@@ -47,7 +47,7 @@ function create_from_template {
 
   if [ "$ERROR" -eq 1 ]; then
     echo "Error while creating a template ${TMP_DIR}/$(basename $FILE) !"
-    exit 1
+    #exit 1
   fi
 }
 
