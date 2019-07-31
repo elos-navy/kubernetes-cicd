@@ -128,6 +128,11 @@ function wait_for_ingress_controller_public_ip {
     echo "Waiting for public IP of ingress router service. (#${COUNTER})"
     sleep 60
   done
+
+  if [ "$ROUTER_IP" == "<pending>" ] || [ "$ROUTER_IP" == "<none>" ]; then
+    echo "ERROR while waiting for LB public IP - no public IP available!"
+    exit 1
+  fi
 }
 
 function install_cert_manager {
