@@ -176,6 +176,8 @@ data:
           <name></name>
           <resourceVersion></resourceVersion>
         </io.fabric8.jenkins.openshiftsync.BuildConfigProjectProperty>
+        <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty/>
+        <org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty/>
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>#!groovy
@@ -439,6 +441,8 @@ data:
           <name></name>
           <resourceVersion></resourceVersion>
         </io.fabric8.jenkins.openshiftsync.BuildConfigProjectProperty>
+        <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty/>
+        <org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty/>
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
