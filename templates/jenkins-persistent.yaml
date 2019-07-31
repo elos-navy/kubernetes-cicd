@@ -52,7 +52,7 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "while true; do if curl -f localhost:8080/login &> /dev/null ; then curl -X POST localhost:8080/job/_COMPONENTS_PIPELINE_JOB_NAME_/build --user admin:_JENKINS_ADMIN_PASSWORD_; break; else sleep 5; fi; done"]
+              command: ["/bin/sh", "-c", "while true; do if [ -f /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/nextBuildNumber ]; then NEXT_BUILD_NUMBER=$(cat /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/nextBuildNumber); else NEXT_BUILD_NUMBER=1; fi; if [ $NEXT_BUILD_NUMBER -ge 2 ]; then break; fi; if curl -f localhost:8080/login &> /dev/null ; then curl -X POST localhost:8080/job/_COMPONENTS_PIPELINE_JOB_NAME_/build --user admin:_JENKINS_ADMIN_PASSWORD_; break; else sleep 5; fi; done"]
       initContainers:
       - name: setup-permissions
         image: alpine:latest
