@@ -13,6 +13,18 @@ spec:
     requests:
       storage: 5Gi
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: _PREFIX_sonarqube
+  name: _PREFIX_sonarqube-config
+data:
+  sonar.properties: |-
+    sonar.jdbc.url=jdbc:sqlserver://_DATABASE_SERVICE_NAME_._COMPONENTS_NAMESPACE_.svc.cluster.local:8081;databaseName=_POSTGRES_DB_
+    sonar.jdbc.username=_POSTGRES_USER_
+    sonar.jdbc.password=_POSTGRES_PASSWORD_
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
