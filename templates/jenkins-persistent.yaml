@@ -446,11 +446,11 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
-    def prefix               = &apos;_PREFIX_&apos;
-    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
-    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def prefix               = &apos;cicd-&apos;
+    def acr_hostname         = &apos;acr7zcvgmkqsd4ia.azurecr.io&apos;
+    def acr_secret_name      = &apos;acr-secret&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
-    def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
+    def git_repo_url         = &apos;https://github.com/elos-tech/openshift-cicd-app&apos;
     
     // Helper variable for prefix substitution with double sed-ed templates.
     def prefix_label          = &apos;PREFIX&apos;
@@ -552,8 +552,8 @@ data:
         def artifactId = null
         def version    = null
         
-        def dev_tag    = null
-        def prod_tag   = null
+        // Label for container images and builds for testing.
+        def build_tag  = null
       }
       
       stages {
@@ -591,13 +591,12 @@ data:
                 artifactId = getArtifactIdFromPom(&quot;pom.xml&quot;)
                 version    = getVersionFromPom(&quot;pom.xml&quot;)
                 
-                dev_tag    = &quot;${version}-${BUILD_NUMBER}&quot;
-                prod_tag   = &quot;${version}&quot;
+                build_tag    = &quot;${version}-${BUILD_NUMBER}&quot;
               }
               
               // Setup correct URL to nexus service in config XML file.
               sh &quot;sed -i &apos;s;&lt;url&gt;http://.*:8081;&lt;url&gt;${nexus_url};&apos; ${maven_config_file}&quot;
-
+    
               // Set current nexus admin password in maven config for uploading artefacts
               // to nexus repos.
               //sh &quot;sed -i &apos;s@&lt;password&gt;.*&lt;/password&gt;@&lt;password&gt;${nexus_admin_password}&lt;/password&gt;@&apos; ${maven_config_file}&quot;
@@ -637,7 +636,7 @@ data:
           steps {
             container(&apos;maven&apos;) {
               echo &apos;Running Sonar scans&apos;
-              sh &quot;${mvnCmd} sonar:sonar -Dsonar.host.url=http://${sonarqube_url}:9000 -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${dev_tag}&quot;
+              sh &quot;${mvnCmd} sonar:sonar -Dsonar.host.url=http://${sonarqube_url}:9000 -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${build_tag}&quot;
             }
           }
         }
@@ -671,11 +670,7 @@ data:
     
                    /kaniko/executor \
                      --context /workspace \
-                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${dev_tag}
-                     
-                   /kaniko/executor \
-                     --context /workspace \
-                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${prod_tag}
+                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
                  &quot;&quot;&quot;
                }
             }
@@ -698,7 +693,7 @@ data:
               create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
                 _${prefix_label}_ ${prefix} \
                 _${acr_secret_name_label}_ ${acr_secret_name} \
-                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${dev_tag}
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
               &quot;&quot;&quot;)
             }
           }
@@ -771,7 +766,7 @@ data:
               create_from_template(tasks_prod_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
                 _${prefix_label}_ &quot;${gb_destination}-&quot; \
                 _${acr_secret_name_label}_ ${acr_secret_name} \
-                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${prod_tag}
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
               &quot;&quot;&quot;)
             }
           }
