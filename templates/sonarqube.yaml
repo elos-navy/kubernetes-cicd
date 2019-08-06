@@ -97,10 +97,10 @@ spec:
         - mountPath: /opt/sonarqube/data
           name: sonarqube-data
         - mountPath: /opt/sonarqube/conf/sonar.properties
-          name: _PREFIX_sonarqube-properties
+          name: sonar-properties
           subPath: sonar.properties
         - mountPath: /opt/sonarqube/conf/wrapper.conf
-          name: _PREFIX_sonarqube-wrapper
+          name: wrapper-conf
           subPath: wrapper.conf
       initContainers:
       - name: setup-datadir
@@ -116,11 +116,11 @@ spec:
       - name: sonarqube-data
         persistentVolumeClaim:
           claimName: _PREFIX_sonarqube
-      - name: sonar.properties
+      - name: sonar-properties
         configMap:
           defaultMode: 420
           name: _PREFIX_sonarqube-properties
-      - name: wrapper.conf
+      - name: wrapper-conf
         configMap:
           defaultMode: 420
           name: _PREFIX_sonarqube-wrapper
