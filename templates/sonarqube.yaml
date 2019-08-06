@@ -16,9 +16,9 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: _PREFIX_sonarqube
+  name: _PREFIX_sonarqube-env-config
   labels:
-    app: _PREFIX_sonarqube-env-config
+    app: _PREFIX_sonarqube
 data:
   SONARQUBE_JDBC_USERNAME: _POSTGRES_USER_
   SONARQUBE_JDBC_PASSWORD: _POSTGRES_PASSWORD_
