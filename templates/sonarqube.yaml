@@ -18,12 +18,50 @@ kind: ConfigMap
 metadata:
   labels:
     app: _PREFIX_sonarqube
-  name: _PREFIX_sonarqube-config
+  name: _PREFIX_sonarqube-properties
 data:
   sonar.properties: |-
     sonar.jdbc.url=jdbc:sqlserver://_DATABASE_SERVICE_NAME_._COMPONENTS_NAMESPACE_.svc.cluster.local:8081;databaseName=_POSTGRES_DB_
     sonar.jdbc.username=_POSTGRES_USER_
     sonar.jdbc.password=_POSTGRES_PASSWORD_
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: _PREFIX_sonarqube
+  name: _PREFIX_sonarqube-wrapper
+data:
+  wrapper.conf: |-
+    wrapper.java.command=java
+    wrapper.java.additional.1=-Dsonar.wrapped=true
+    wrapper.java.additional.2=-Djava.awt.headless=true
+    wrapper.java.mainclass=org.tanukisoftware.wrapper.WrapperSimpleApp
+    wrapper.java.classpath.1=../../lib/jsw/*.jar
+    wrapper.java.classpath.2=../../lib/common/*.jar
+    wrapper.java.classpath.3=../../lib/*.jar
+    wrapper.java.library.path.1=./lib
+    wrapper.app.parameter.1=org.sonar.application.App
+    wrapper.java.initmemory=8
+    wrapper.java.maxmemory=32
+    wrapper.console.format=PM
+    wrapper.console.loglevel=INFO
+    wrapper.logfile=../../logs/sonar.log
+    wrapper.logfile.format=M
+    wrapper.logfile.loglevel=INFO
+    wrapper.syslog.loglevel=NONE
+    wrapper.console.title=SonarQube
+    wrapper.single_invocation=true
+    wrapper.ntservice.name=SonarQube
+    wrapper.ntservice.displayname=SonarQube
+    wrapper.ntservice.description=SonarQube
+    wrapper.ntservice.dependency.1=
+    wrapper.ntservice.starttype=AUTO_START
+    wrapper.ntservice.interactive=false
+    wrapper.disable_restarts=TRUE
+    wrapper.ping.timeout=0
+    wrapper.shutdown.timeout=0
+    wrapper.jvm_exit.timeout=0
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -56,8 +94,14 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-          - mountPath: /opt/sonarqube/data
-            name: sonarqube-data
+        - mountPath: /opt/sonarqube/data
+          name: sonarqube-data
+        - mountPath: /opt/sonarqube/conf/sonar.properties
+          name: _PREFIX_sonarqube-properties
+          subPath: sonar.properties
+        - mountPath: /opt/sonarqube/conf/wrapper.conf
+          name: _PREFIX_sonarqube-wrapper
+          subPath: wrapper.conf
       initContainers:
       - name: setup-datadir
         image: alpine:latest
@@ -69,9 +113,17 @@ spec:
         - mountPath: /mnt
           name: sonarqube-data
       volumes:
-        - name: sonarqube-data
-          persistentVolumeClaim:
-            claimName: _PREFIX_sonarqube
+      - name: sonarqube-data
+        persistentVolumeClaim:
+          claimName: _PREFIX_sonarqube
+      - name: sonar.properties
+        configMap:
+          defaultMode: 420
+          name: _PREFIX_sonarqube-properties
+      - name: wrapper.conf
+        configMap:
+          defaultMode: 420
+          name: _PREFIX_sonarqube-wrapper
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
