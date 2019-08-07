@@ -104,6 +104,9 @@ spec:
         resources: {}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        env:
+        - name: JAVA_OPTS
+          value: "-Dsonar.search.javaAdditionalOpts=-Dnode.store.allow_mmapfs=false"
         envFrom:
         - configMapRef:
             name: _PREFIX_sonarqube-env-config
