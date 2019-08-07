@@ -110,12 +110,6 @@ spec:
         volumeMounts:
         - mountPath: /opt/sonarqube/data
           name: sonarqube-data
-        - mountPath: /opt/sonarqube/conf/sonar.properties
-          name: sonar-properties
-          subPath: sonar.properties
-        - mountPath: /opt/sonarqube/conf/wrapper.conf
-          name: wrapper-conf
-          subPath: wrapper.conf
       initContainers:
       - name: setup-datadir
         image: alpine:latest
