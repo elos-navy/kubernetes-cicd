@@ -290,7 +290,15 @@ data:
         // Wait for deployment of sonarqube until postgres is ready to handle requests.
         wait_for_deployment_ready(components_namespace, &quot;${name_prefix}sonar-postgres&quot;)
         
-        create_from_template components_namespace, &quot;templates/sonarqube.yaml _${prefix_label}_ ${name_prefix}&quot;
+        create_from_template components_namespace, &quot;&quot;&quot;templates/sonarqube.yaml \
+          _${prefix_label}_ ${name_prefix} \
+          _POSTGRES_DB_ sonar \
+          _POSTGRES_USER_ sonar \
+          _POSTGRES_PASSWORD_ sonar \
+          _DATABASE_SERVICE_NAME_ postgresql-sonarqube \
+          _COMPONENTS_NAMESPACE_ &quot;${components_namespace}&quot;
+        &quot;&quot;&quot;
+
         create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
           _RESOURCE_NAME_ &quot;${name_prefix}sonarqube&quot; \
           _DNS_NAME_ &quot;sonarqube.${dns_domain}&quot; \
