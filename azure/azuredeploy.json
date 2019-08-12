@@ -232,23 +232,23 @@
   ],
   "outputs": {
     "Jenkins url": {
-      "value": "[concat('https://jenkins.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
+      "value": "[concat('https://jenkins.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
     },
     "Sonarqube url": {
-      "value": "[concat('https://sonarqube.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
+      "value": "[concat('https://sonarqube.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
     },
     "Nexus url": {
-      "value": "[concat('https://nexus.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
+      "value": "[concat('https://nexus.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
     },
     "Application dev url": {
-      "value": "[concat('https://application-dev.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
+      "value": "[concat('https://application-dev.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
     },
     "Application prod url": {
-      "value": "[concat('https://application-prod.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value.statuses[0].message, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
+      "value": "[concat('https://application-prod.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
     },
     "Auxvm ssh": {
