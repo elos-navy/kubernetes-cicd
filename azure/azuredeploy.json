@@ -234,7 +234,13 @@
     }
   ],
   "outputs": {
+    "Error message": {
+      "condition": "[contains(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'ERROR')]",
+      "value": "[replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', '')]",
+      "type": "string"
+    },
     "Jenkins url": {
+      "condition": "[not(contains(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'ERROR'))]",
       "value": "[concat('https://jenkins.', replace(replace(reference(variables('bootstrapExtensionName')).outputs.instanceView.value, 'Enable succeeded: \n[stdout]\n', ''), '\n[stderr]\n', ''))]",
       "type": "string"
     },
