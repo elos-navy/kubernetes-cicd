@@ -31,12 +31,9 @@
     },
     "kubernetesVersion": {
       "type": "string",
-      "defaultValue": "1.13.8",
+      "defaultValue": "1.13.10",
       "allowedValues": [
-        "1.13.8",
-        "1.13.7",
-        "1.12.8",
-        "1.11.10"
+        "1.13.10"
       ],
       "metadata": {
         "description": "The version of the Kubernetes running in AKS."
@@ -117,6 +114,21 @@
     "auxvmTemplateUrl": "[uri(variables('artifactsLocation'), concat('azure/nested/auxvm.json', variables('artifactsLocationSasToken')))]"
   },
   "resources": [
+    {
+      "apiVersion": "2018-02-01",
+      "name": "pid-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+      "type": "Microsoft.Resources/deployments",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": []
+        }
+      }
+    },
+
+
     {
       "name": "[variables('auxvmDeploymentName')]",
       "type": "Microsoft.Resources/deployments",

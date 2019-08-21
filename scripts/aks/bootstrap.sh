@@ -85,6 +85,9 @@ create_from_template templates/jenkins-namespace.yaml \
   _PREFIX_ $PREFIX
 kubectl config set-context $(kubectl config current-context) --namespace=${PREFIX}jenkins
 
+# Create secret containing jenkins admin password.
+$JENKINS_ADMIN_PASSWORD
+
 # ACR credentials and hostname are used with jenkins/pipeline deployment
 # and later for building jenkins agent container image.
 ACR_CREDENTIALS=$(az acr credential show -n $REGISTRY_NAME)
