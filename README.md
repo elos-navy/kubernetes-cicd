@@ -1,10 +1,10 @@
-# Kubernetes CI/CD ELOS projekt
+# Kubernetes CI/CD ELOS project
 
-Skripty a sablony pre vytvorenie CI/CD projektu.
+Scripts and templates for CI/CD project deployment.
 
 ## Azure AKS
 
-### Deployment cez objednavku sluzby
+### Deployment via service order
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Felos-tech%2Fkubernetes-cicd%2Fmaster%2Fazure%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
@@ -13,37 +13,39 @@ Skripty a sablony pre vytvorenie CI/CD projektu.
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
-#### Prerekvizity
+#### Prerequisites
 
-* Registracia aplikacie (service principal) + priradenie role. Do formularu je nutne ziskat udaje ID a Secret key vytvorenej registracie v AD. Navod ako na to: https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
+* Application registration (service principal) + role asiignement. Form accepts ID and secret key of application registration in AD. How to register new application: https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
 
 #### Troubleshooting
 
-##### Podporovana verzia kubernetes
+##### Supported version of kubernetes
 
-Provisioning moze skoncit nasledujucou chybou: 'The value of parameter orchestratorProfile.OrchestratorVersion is invalid'. Vtedy je nutne pozriet sa na podporovane verzie kubernetes v regionu:
+Deployment can end up with following error: 'The value of parameter orchestratorProfile.OrchestratorVersion is invalid'. Then it is needed to find out supported version of kubernetes:
 
 ```
 az aks get-versions --location westeurope --output table
 ```
 
-A podporovanu verziu zadat do formularu. Podporovane verzie sa casom menia!
+And this version to enter into form and update ARM template. Supported versions are changing over time!
 
-### Manualne vytvorenie clusteru
+### Manually created cluster
 
-#### Prerekvizity
+#### Prerequisites
 
-Treba mat nainstalovane azure CLI - prikaz `az` a balicek/prikaz `jq`.
-Prikazy v tomto README je nutne spustat z korenoveho adresaru tohoto repozitaru.
-Pred pokracovanim v dalsich prikazoch je tiez nutne sa prihlasit prikazom `az login`.
+* Azure CLI (`az` command) and `jq` package/command.
+* Login to Azure with `az login` command.
+* Commands in this README should be executed in root directory of this GIT repo clone.
 
-#### Konfiguracia
+#### Configuration
+
+Setup names of resource groups, cluster, registry to your needs. Or leave it as it is, but no other resources with the same name should exist.
 
 ```
-vim scripts/config # Nastavenie nazvov rg, clusteru, registry. Pripadne nechat to co tam je, ale cluster by nemal existovat.
+vim scripts/config
 ```
 
-#### Vytvorenie clusteru
+#### Create AKS cluster
 
 ```
 ./scripts/aks/manage_cluster.sh create_rg
@@ -52,7 +54,7 @@ vim scripts/config # Nastavenie nazvov rg, clusteru, registry. Pripadne nechat t
 ./scripts/aks/manage_cluster.sh setup_credentials
 ```
 
-#### Zmazanie clusteru
+#### Remove AKS cluster
 
 ```
 ./scripts/aks/manage_cluster.sh delete_cluster
@@ -60,26 +62,21 @@ vim scripts/config # Nastavenie nazvov rg, clusteru, registry. Pripadne nechat t
 ./scripts/aks/manage_cluster.sh delete_rg
 ```
 
-#### Vytvorenie Jenkinsu
+#### Create Jenkins
 
-```
-./scripts/jenkins-bootstrap.sh
-```
+TODO
 
 #### Jenkins login
 
-Zistit verejnu adresu jenkins sluzby prikazom:
+Get public IP address of jenkins service:
 
 ```
 kubectl get svc cicd-jenkins
 ```
 
-V stlpci `EXTERNAL-IP` je adresa, na ktoru je mozne sa pripojit cez web prehliadac a port 8080.
+In `EXTERNAL-IP` columnt, there is an IP address accessible via web browser on port 8080.
 
-Meno/heslo do web rozhrania: `admin/admin`
 
-#### Zmazanie komponent a jenkinsu
+#### Removal of jenkins components
 
-```
-./scripts/jenkins-cleanup.sh
-```
+TODO
