@@ -86,7 +86,7 @@ create_from_template templates/jenkins-namespace.yaml \
 kubectl config set-context $(kubectl config current-context) --namespace=${PREFIX}jenkins
 
 # Create secret containing jenkins admin password.
-SECRET_FILE="$(mktemp -d)/password.txt"
+SECRET_FILE="$(mktemp -d)/password"
 echo -n $JENKINS_ADMIN_PASSWORD > $SECRET_FILE
 kubectl create secret generic $JENKINS_ADMIN_PASSWORD_SECRET_NAME \
   --from-file=$SECRET_FILE
