@@ -98,7 +98,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - rm -rf /var/lib/jenkins/jobs/OpenShift\ Sample
+          - rm -rf '/var/lib/jenkins/jobs/OpenShift Sample'
         volumeMounts:
         - mountPath: /var/lib/jenkins
           name: jenkins-data
