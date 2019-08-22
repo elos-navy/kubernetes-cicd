@@ -82,7 +82,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - [ -d "/var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_" ] && exit 0; mkdir -p /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/
+          - ls "/var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_" && exit 0; mkdir -p /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/
         volumeMounts:
         - mountPath: /var/lib/jenkins
           name: jenkins-data
@@ -93,7 +93,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - [ -d "/var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_" ] && exit 0; mkdir -p /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/
+          - ls "/var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_" && exit 0; mkdir -p /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/
         volumeMounts:
         - mountPath: /var/lib/jenkins
           name: jenkins-data
