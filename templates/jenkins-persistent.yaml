@@ -78,7 +78,7 @@ spec:
         - mountPath: /mnt
           name: jenkins-plugins
       - name: prepare-components-job
-        image: openshift/jenkins-2-centos7:latest
+        image: alpine:latest
         command:
           - /bin/sh
           - -c
@@ -89,7 +89,7 @@ spec:
         - mountPath: /mnt
           name: components-job
       - name: prepare-app-job
-        image: openshift/jenkins-2-centos7:latest
+        image: alpine:latest
         command:
           - /bin/sh
           - -c
@@ -99,6 +99,15 @@ spec:
           name: jenkins-data
         - mountPath: /mnt
           name: app-job
+      - name: remove-example-job
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - rm -rf /var/lib/jenkins/jobs/OpenShift\ Sample
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
       volumes:
       - name: jenkins-data
         persistentVolumeClaim:
