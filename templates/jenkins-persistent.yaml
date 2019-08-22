@@ -79,10 +79,7 @@ spec:
           name: jenkins-plugins
       - name: prepare-components-job
         image: alpine:latest
-        command:
-          - /bin/sh
-          - -c
-          - ls "/var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_" && exit 0; mkdir -p /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/
+        command: ["/bin/sh", "-c", "if [ -d '/var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_' ]; then exit 0; fi; mkdir -p /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/"]
         volumeMounts:
         - mountPath: /var/lib/jenkins
           name: jenkins-data
@@ -90,10 +87,7 @@ spec:
           name: components-job
       - name: prepare-app-job
         image: alpine:latest
-        command:
-          - /bin/sh
-          - -c
-          - ls "/var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_" && exit 0; mkdir -p /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/
+        command: ["/bin/sh", "-c", "if [ -d '/var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_' ]; then exit 0; fi; mkdir -p /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/"]
         volumeMounts:
         - mountPath: /var/lib/jenkins
           name: jenkins-data
