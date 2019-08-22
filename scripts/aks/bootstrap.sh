@@ -86,7 +86,11 @@ create_from_template templates/jenkins-namespace.yaml \
 kubectl config set-context $(kubectl config current-context) --namespace=${PREFIX}jenkins
 
 # Create secret containing jenkins admin password.
-$JENKINS_ADMIN_PASSWORD
+SECRET_FILE="$(mktemp -d)/password.txt"
+echo -n $JENKINS_ADMIN_PASSWORD > $SECRET_FILE
+kubectl create secret generic $JENKINS_ADMIN_PASSWORD_SECRET_NAME \
+  --from-file=$SECRET_FILE
+rm -f $SECRET_FILE
 
 # ACR credentials and hostname are used with jenkins/pipeline deployment
 # and later for building jenkins agent container image.
@@ -97,11 +101,11 @@ ACR_HOSTNAME=$(az acr show -n $REGISTRY_NAME | jq '.loginServer' | sed 's/"//g')
 
 # Jenkins
 create_from_template templates/jenkins-persistent.yaml \
-  _PREFIX_ $PREFIX \
-  _JENKINS_ADMIN_PASSWORD_ "$JENKINS_ADMIN_PASSWORD" \
+  _PREFIX_ "$PREFIX" \
   _APPLICATION_GIT_URL_ "$APPLICATION_GIT_URL" \
   _REGISTRY_HOSTNAME_ "$ACR_HOSTNAME" \
   _REGISTRY_SECRET_NAME_ "$REGISTRY_SECRET_NAME" \
+  _JENKINS_ADMIN_PASSWORD_SECRET_ "$JENKINS_ADMIN_PASSWORD_SECRET_NAME" \
   _COMPONENTS_PIPELINE_JOB_NAME_ 'cicd-components-pipeline' \
   _APP_PIPELINE_JOB_NAME_ 'cicd-app-pipeline' \
   _DNS_ZONE_NAME_ "$DNS_ZONE_NAME"

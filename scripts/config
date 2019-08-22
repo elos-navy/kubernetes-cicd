@@ -8,10 +8,15 @@ APPLICATION_GIT_URL='https://github.com/elos-tech/openshift-cicd-app.git'
 # Must conform to the following pattern: '^[a-zA-Z0-9]*$'
 REGISTRY_NAME='eloscicdregistry'
 
-# Kubernetes secret name. This secret is used for ACR authentication.
+# Kubernetes secret names.
 #
 # DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+
+# This secret is used for ACR authentication.
 REGISTRY_SECRET_NAME='acr-secret'
+
+# Secret holding jenkins admin password from user input.
+JENKINS_ADMIN_PASSWORD_SECRET_NAME='jenkins-admin-password'
 
 
 ### AKS cluster
