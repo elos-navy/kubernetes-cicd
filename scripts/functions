@@ -98,9 +98,6 @@ function install_helm {
   sudo mv -f linux-amd64/helm /usr/local/bin/
   sudo mv -f linux-amd64/tiller /usr/local/bin/
   cd -
-}
-
-function install_ingress_controller {
 
   # Create service account for tiller part.
   create_from_template templates/helm/helm-rbac.yaml
@@ -108,6 +105,9 @@ function install_ingress_controller {
     --service-account tiller \
     --node-selectors "beta.kubernetes.io/os"="linux"
   helm repo update
+}
+
+function install_ingress_controller {
 
   # Create namespace and nginx ingress pods.
   kubectl create namespace $INGRESS_NAMESPACE
