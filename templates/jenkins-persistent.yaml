@@ -172,7 +172,15 @@ data:
   config.xml: |-
     <?xml version='1.1' encoding='UTF-8'?>
     <flow-definition plugin="workflow-job@2.29">
-      <actions/>
+      <actions>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.3.4.1"/>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.3.4.1">
+          <jobProperties/>
+          <triggers/>
+          <parameters/>
+          <options/>
+        </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+      </actions>
       <description></description>
       <keepDependencies>false</keepDependencies>
       <properties>
@@ -186,9 +194,7 @@ data:
         <org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty/>
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
-        <script>#!groovy
-    
-    def source_git_repo      = &apos;https://github.com/elos-tech/kubernetes-cicd.git&apos;
+        <script>def source_git_repo      = &apos;https://github.com/elos-tech/kubernetes-cicd.git&apos;
     def name_prefix          = &apos;_PREFIX_&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
     def dns_domain           = &apos;_DNS_ZONE_NAME_&apos;
@@ -198,18 +204,80 @@ data:
     def app_prod_namespace   = &quot;${name_prefix}tasks-prod&quot;
     def nexus_admin_password = &apos;admin123&apos;
     
-    node {
-      stage(&apos;Cleanup&apos;) {
-        delete_namespace(components_namespace)
-        delete_namespace(app_dev_namespace)
-        delete_namespace(app_prod_namespace)
-        
-        // Delete helm installations for all components
-        sh &quot;&quot;&quot;
-          helm delete --purge cicd
-        &quot;&quot;&quot;
-      }
+    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
+    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def agent_image          = &quot;${acr_hostname}/${name_prefix}jenkins/jenkins-agent&quot;
     
+    
+    pipeline {
+      agent {
+        kubernetes {
+          label &apos;jenkins-agent&apos;
+          cloud &apos;openshift&apos;
+          yaml &quot;&quot;&quot;
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        pod: jenkins-agent
+    spec:
+      imagePullSecrets:
+      - name: ${acr_secret_name}
+      containers:
+      - name: maven
+        image: ${agent_image}
+        command:
+        - cat
+        tty: true
+        securityContext:
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+      - name: jnlp
+        env:
+        - name: JENKINS_URL
+          value: &apos;http://${name_prefix}jenkins.${name_prefix}jenkins.svc.cluster.local:8080/&apos;
+        - name: JENKINS_TUNNEL
+          value: &apos;${name_prefix}jenkins-jnlp.${name_prefix}jenkins.svc.cluster.local:50000&apos;
+        securityContext:
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+      - name: kaniko
+        image: gcr.io/kaniko-project/executor:debug
+        imagePullPolicy: Always
+        command:
+        - /busybox/cat
+        tty: true
+        volumeMounts:
+          - name: jenkins-docker-cfg
+            mountPath: /kaniko/.docker
+      volumes:
+      - name: jenkins-docker-cfg
+        projected:
+          sources:
+          - secret:
+              name: ${acr_secret_name}
+              items:
+                - key: .dockerconfigjson
+                  path: config.json
+    &quot;&quot;&quot;
+        }
+      }    
+        
+      stages {
+          
+        stage(&apos;Cleanup&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              delete_namespace(components_namespace)
+              delete_namespace(app_dev_namespace)
+              delete_namespace(app_prod_namespace)
+        
+              sh &quot;helm delete --purge cicd&quot;
+            }
+          }
+        }
+    
+    /*
       stage(&apos;Checkout Source&apos;) {
         git source_git_repo
       }
@@ -219,7 +287,6 @@ data:
       }
       
       stage(&apos;Create Nexus&apos;) {
-        /*
         create_from_template components_namespace, &quot;templates/nexus.yaml _${prefix_label}_ $name_prefix&quot;
         create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
           _RESOURCE_NAME_ &quot;${name_prefix}nexus3&quot; \
@@ -227,21 +294,11 @@ data:
           _NAMESPACE_ &quot;${components_namespace}&quot; \
           _SERVICE_NAME_ &quot;${name_prefix}nexus3&quot; \
           _SERVICE_PORT_ 8081
-        &quot;&quot;&quot;*/
-        
-        sh &quot;&quot;&quot;
-          cd templates/helm
-          helm install \
-            --name cicd \
-            --namespace &quot;${components_namespace}&quot; \
-            --set fqdn=&quot;nexus.${dns_domain}&quot; \
-            nexus
         &quot;&quot;&quot;
-        
-        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}nexus&quot;)
+        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}nexus3&quot;)
     
         // Get nexus pod name    
-        def pod_name = get_pod_name(components_namespace, &quot;${name_prefix}nexus&quot;)
+        def pod_name = get_pod_name(components_namespace, &quot;${name_prefix}nexus3&quot;)
         
         // Wait till nexus service API is available
         sh &quot;&quot;&quot;
@@ -364,9 +421,11 @@ data:
       }
       
       //stage(&apos;Start Application Pipeline&apos;) {
-    //    build job: &quot;cicd-app-pipeline&quot;,
-    //      wait: false
-    //  }
+      //  build job: &quot;cicd-app-pipeline&quot;,
+      //      wait: false
+      //}
+      */
+      }
     }
     
     def delete_namespace(namespace_name) {

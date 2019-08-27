@@ -119,8 +119,9 @@ install_helm
 install_ingress_controller
 install_cert_manager
 
-# Build and push Jenkins agent POD to ACR registry
-az acr build -t ${PREFIX}jenkins/jenkins-agent-appdev:latest -r $REGISTRY_NAME artefacts/
+# Build and push jenkins agents to ACR registry
+az acr build -t ${PREFIX}jenkins/jenkins-agent:latest -r $REGISTRY_NAME artefacts/jenkins-agent/
+az acr build -t ${PREFIX}jenkins/jenkins-agent-maven:latest -r $REGISTRY_NAME artefacts/jenkins-agent-maven/
 
 # Set k8s secret for pulling images from ACR registry
 kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
