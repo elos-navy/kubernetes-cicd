@@ -203,6 +203,11 @@ data:
         delete_namespace(components_namespace)
         delete_namespace(app_dev_namespace)
         delete_namespace(app_prod_namespace)
+        
+        // Delete helm installations for all components
+        sh &quot;&quot;&quot;
+          helm delete --purge cicd
+        &quot;&quot;&quot;
       }
     
       stage(&apos;Checkout Source&apos;) {
@@ -214,6 +219,7 @@ data:
       }
       
       stage(&apos;Create Nexus&apos;) {
+        /*
         create_from_template components_namespace, &quot;templates/nexus.yaml _${prefix_label}_ $name_prefix&quot;
         create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
           _RESOURCE_NAME_ &quot;${name_prefix}nexus3&quot; \
@@ -221,11 +227,21 @@ data:
           _NAMESPACE_ &quot;${components_namespace}&quot; \
           _SERVICE_NAME_ &quot;${name_prefix}nexus3&quot; \
           _SERVICE_PORT_ 8081
+        &quot;&quot;&quot;*/
+        
+        sh &quot;&quot;&quot;
+          cd templates/helm
+          helm install \
+            --name cicd \
+            --namespace &quot;${components_namespace}&quot; \
+            --set fqdn=&quot;nexus.${dns_domain}&quot; \
+            nexus
         &quot;&quot;&quot;
-        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}nexus3&quot;)
+        
+        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}nexus&quot;)
     
         // Get nexus pod name    
-        def pod_name = get_pod_name(components_namespace, &quot;${name_prefix}nexus3&quot;)
+        def pod_name = get_pod_name(components_namespace, &quot;${name_prefix}nexus&quot;)
         
         // Wait till nexus service API is available
         sh &quot;&quot;&quot;
@@ -304,7 +320,7 @@ data:
           _DATABASE_SERVICE_NAME_ postgresql-sonarqube \
           _COMPONENTS_NAMESPACE_ &quot;${components_namespace}&quot;
         &quot;&quot;&quot;
-
+    
         create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
           _RESOURCE_NAME_ &quot;${name_prefix}sonarqube&quot; \
           _DNS_NAME_ &quot;sonarqube.${dns_domain}&quot; \
@@ -347,10 +363,10 @@ data:
         &quot;&quot;&quot;
       }
       
-      stage(&apos;Start Application Pipeline&apos;) {
-        build job: &quot;cicd-app-pipeline&quot;,
-          wait: false
-      }
+      //stage(&apos;Start Application Pipeline&apos;) {
+    //    build job: &quot;cicd-app-pipeline&quot;,
+    //      wait: false
+    //  }
     }
     
     def delete_namespace(namespace_name) {
