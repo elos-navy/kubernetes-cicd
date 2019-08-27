@@ -224,7 +224,7 @@ data:
       imagePullSecrets:
       - name: ${acr_secret_name}
       containers:
-      - name: maven
+      - name: agent
         image: ${agent_image}
         command:
         - cat
@@ -267,25 +267,48 @@ data:
           
         stage(&apos;Cleanup&apos;) {
           steps {
-            container(&apos;maven&apos;) {
+            container(&apos;agent&apos;) {
               delete_namespace(components_namespace)
               delete_namespace(app_dev_namespace)
               delete_namespace(app_prod_namespace)
         
-              sh &quot;helm delete --purge cicd&quot;
+              sh &quot;helm delete --purge cicd || echo&quot;
             }
           }
         }
     
-    /*
-      stage(&apos;Checkout Source&apos;) {
-        git source_git_repo
-      }
-      
-      stage(&apos;Create Components namespace&apos;) {
-        create_from_template &apos;default&apos;, &quot;templates/components-namespace.yaml _${prefix_label}_ $name_prefix&quot;
-      }
-      
+        stage(&apos;Checkout Source&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
+              git url: source_git_repo, branch: &apos;development&apos;
+            }
+          }
+        }
+        
+        stage(&apos;Create Components namespace&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
+              create_from_template &apos;default&apos;, &quot;templates/components-namespace.yaml _${prefix_label}_ $name_prefix&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Create Nexus&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
+              sh &quot;&quot;&quot;
+                cd templates/helm
+                helm install \
+                  --namespace ${components_namespace} \
+                  --name cicd \
+                  --set fqdn=&apos;nexus.${dns_domain}&apos; \
+                  nexus
+              &quot;&quot;&quot;
+            }
+          }
+        }
+        
+      /*
       stage(&apos;Create Nexus&apos;) {
         create_from_template components_namespace, &quot;templates/nexus.yaml _${prefix_label}_ $name_prefix&quot;
         create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
@@ -430,10 +453,10 @@ data:
     
     def delete_namespace(namespace_name) {
       sh &quot;&quot;&quot;
-        kubectl delete namespace $namespace_name || echo
-        while true;
+        kubectl delete namespace $namespace_name --ignore-not-found=true
+        for i in \$(seq 1 30);
         do
-          kubectl get namespaces $namespace_name || break
+          kubectl get namespaces $namespace_name &amp;&gt;/dev/null || break
           sleep 2
         done
       &quot;&quot;&quot;
