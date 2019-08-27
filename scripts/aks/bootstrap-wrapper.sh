@@ -27,8 +27,8 @@
 
   cd /root
   git clone https://github.com/elos-tech/kubernetes-cicd.git
-  git checkout $GIT_BRANCH
   cd kubernetes-cicd
+  git checkout "$GIT_BRANCH"
 
   # Just for troubleshooting.
   echo ./scripts/aks/bootstrap.sh "${ORIG_PARAMS[@]}" > /deploy.sh
