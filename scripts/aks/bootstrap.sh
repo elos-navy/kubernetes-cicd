@@ -50,6 +50,10 @@ do
       LOCATION="$1"
       shift
       ;;
+    --git_branch)
+      GIT_BRANCH="$1"
+      shift
+      ;;
     *)
       echo "ERROR: Unknown argument '$KEY' to script '$0'" 1>&2
       exit -1

@@ -189,7 +189,7 @@ data:
         <script>#!groovy
     
     def source_git_repo      = &apos;https://github.com/elos-tech/kubernetes-cicd.git&apos;
-    def name_prefix          = &apos;cicd-&apos;
+    def name_prefix          = &apos;_PREFIX_&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
     def dns_domain           = &apos;_DNS_ZONE_NAME_&apos;
     def jenkins_namespace    = &quot;${name_prefix}jenkins&quot;
