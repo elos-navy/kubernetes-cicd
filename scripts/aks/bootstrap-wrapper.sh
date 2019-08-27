@@ -5,7 +5,7 @@
 # script return value for errors.
 
 {
-  ORIG_PARAMS=$@
+  ORIG_PARAMS=("$@")
   GIT_BRANCH='master'
 
   # GIT branch parameter is needed to switch to correct branch after repo
@@ -31,13 +31,13 @@
   cd kubernetes-cicd
 
   # Just for troubleshooting.
-  echo ./scripts/aks/bootstrap.sh "$ORIG_PARAMS" > /deploy.sh
+  echo ./scripts/aks/bootstrap.sh "${ORIG_PARAMS[@]}" > /deploy.sh
   chmod +x /deploy.sh
 
   echo EMPTY > /http_application_routing_zone
 } &> /dev/null
 
-sudo -u root ./scripts/aks/bootstrap.sh "$ORIG_PARAMS" &> /deployment.log
+sudo -u root ./scripts/aks/bootstrap.sh "${ORIG_PARAMS[@]}" &> /deployment.log
 
 # In case bootstrap script will fail, this script deployment should fail too.
 # This will result in failed deployment in user portal.
