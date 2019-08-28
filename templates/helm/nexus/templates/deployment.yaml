@@ -27,8 +27,16 @@ spec:
         resources: {}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        volumeMounts:
+        - name: nexus-script
+          mountPath: /mnt
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
+      volumes:
+      - name: nexus-script
+        configMap:
+          name: initialize_nexus_repos_script
+          defaultMode: 0755
