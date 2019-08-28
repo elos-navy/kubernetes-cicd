@@ -4,6 +4,8 @@
 
 fqdn: nexus.example.com
 
+newAdminPassword: admin123
+
 replicaCount: 1
 
 image:

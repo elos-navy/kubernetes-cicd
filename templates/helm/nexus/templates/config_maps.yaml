@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   labels:
     app: {{ include "nexus.fullname" . }}
-  name: initialize_nexus_repos_script
+  name: initialize-nexus-repos-script
 data:
   initialize_nexus_repos.sh: |-
     #!/bin/bash -x
