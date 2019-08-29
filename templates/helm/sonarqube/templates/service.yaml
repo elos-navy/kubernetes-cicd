@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: {{ include "sonarqube.fullname" . }}
+  name: {{ include "sonarqube.fullname" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    protocol: TCP
+    targetPort: {{ .Values.service.targetPort }}
+  selector:
+    app: {{ include "sonarqube.fullname" . }}
+  sessionAffinity: None

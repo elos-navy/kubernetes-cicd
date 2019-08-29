@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sonarqube.fullname" . }}-env-config
+  labels:
+    app: {{ include "sonarqube.fullname" . }}
+data:
+  SONARQUBE_JDBC_USERNAME: {{ .Values.database.user }}
+  SONARQUBE_JDBC_PASSWORD: {{ .Values.database.password }}
+  SONARQUBE_JDBC_URL: "jdbc:postgresql://{{ .Values.database.serviceName }}.{{ .Values.database.namespace }}.svc.cluster.local:{{ .Values.database.port }}/{{ .Values.database.name }}"
+

@@ -1,0 +1,103 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: _PREFIX_jenkins
+  name: _PREFIX_jenkins
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: _PREFIX_jenkins
+    spec:
+      serviceAccountName: jenkins
+      containers:
+      - name: jenkins
+        image: openshift/jenkins-2-centos7:latest
+        ports:
+        - containerPort: 8080
+        - containerPort: 50000
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 2
+          failureThreshold: 5
+        env:
+        - name: JAVA_OPTS
+          value: "-Djenkins.install.runSetupWizard=false"
+        - name: JENKINS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: _JENKINS_ADMIN_PASSWORD_SECRET_
+              key: password
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "for i in $(seq 1 20); do if [ -f /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/nextBuildNumber ]; then NEXT_BUILD_NUMBER=$(cat /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/nextBuildNumber); else NEXT_BUILD_NUMBER=1; fi; if [ $NEXT_BUILD_NUMBER -ge 2 ]; then break; fi; if curl -f localhost:8080/login &> /dev/null ; then curl -X POST localhost:8080/job/_COMPONENTS_PIPELINE_JOB_NAME_/build --user admin:${JENKINS_PASSWORD}; break; else sleep 10; fi; done"]
+      initContainers:
+      - name: setup-permissions
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - ls -l /var/lib/jenkins; chown 1001:1001 /var/lib/jenkins
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
+      - name: install-plugins
+        image: openshift/jenkins-2-centos7:latest
+        command:
+          - /bin/sh
+          - -c
+          - install-plugins.sh < /mnt/plugins.txt
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
+        - mountPath: /mnt
+          name: jenkins-plugins
+      - name: prepare-components-job
+        image: openshift/jenkins-2-centos7:latest
+        command: ["/bin/sh", "-c", "if [ -d '/var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_' ]; then exit 0; fi; mkdir -p /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_COMPONENTS_PIPELINE_JOB_NAME_/"]
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
+        - mountPath: /mnt
+          name: components-job
+      - name: prepare-app-job
+        image: openshift/jenkins-2-centos7:latest
+        command: ["/bin/sh", "-c", "if [ -d '/var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_' ]; then exit 0; fi; mkdir -p /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; cd /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/builds; touch legacyIds; ln -s ./-1 lastFailedBuild; ln -s ./-1 lastStableBuild; ln -s ./-1 lastSuccessfulBuild; ln -s ./-1 lastUnstableBuild; ln -s ./-1 lastUnsuccessfulBuild; cp /mnt/config.xml /var/lib/jenkins/jobs/_APP_PIPELINE_JOB_NAME_/"]
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
+        - mountPath: /mnt
+          name: app-job
+      - name: remove-example-job
+        image: openshift/jenkins-2-centos7:latest
+        command:
+          - /bin/sh
+          - -c
+          - rm -rf '/var/lib/jenkins/jobs/OpenShift Sample'
+        volumeMounts:
+        - mountPath: /var/lib/jenkins
+          name: jenkins-data
+      volumes:
+      - name: jenkins-data
+        persistentVolumeClaim:
+          claimName: _PREFIX_jenkins-pv-claim
+      - name: jenkins-plugins
+        configMap:
+          name: _PREFIX_jenkins-plugins
+      - name: components-job
+        configMap:
+          name: _PREFIX_components-job
+      - name: app-job
+        configMap:
+          name: _PREFIX_app-job

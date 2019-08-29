@@ -1,0 +1,53 @@
+# Default values for sonarqube.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+name: sonarqube
+
+fqdn: sonarqube.example.com
+
+database:
+  name: sonarqube
+  user: admin
+  password: admin
+  port: 5432
+  serviceName: postgresql
+  namespace: default
+
+replicaCount: 1
+
+image:
+  repository: docker.io/sonarqube
+  tag: 7.7-community
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 9000
+  targetPort: 9000
+
+ingress:
+  tls:
+    secretName: sonarqube-tls-secret
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

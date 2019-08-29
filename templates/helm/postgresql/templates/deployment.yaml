@@ -1,0 +1,39 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ include "postgresql.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "postgresql.fullname" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: {{ include "postgresql.fullname" . }}-config
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgredb
+      initContainers:
+      - name: setup-datadir
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - rm -rf /mnt/lost+found
+        volumeMounts:
+        - mountPath: /mnt
+          name: postgredb
+      volumes:
+        - name: postgredb
+          persistentVolumeClaim:
+            claimName: {{ include "postgresql.fullname" . }}-pv-claim
+

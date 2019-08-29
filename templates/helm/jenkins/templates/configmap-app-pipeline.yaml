@@ -1,0 +1,439 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: _PREFIX_jenkins
+  name: _PREFIX_app-job
+data:
+  config.xml: |-
+    <?xml version='1.1' encoding='UTF-8'?>
+    <flow-definition plugin="workflow-job@2.29">
+      <actions>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.3.4.1"/>
+        <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.3.4.1">
+          <jobProperties/>
+          <triggers/>
+          <parameters/>
+          <options/>
+        </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+      </actions>
+      <description></description>
+      <keepDependencies>false</keepDependencies>
+      <properties>
+        <io.fabric8.jenkins.openshiftsync.BuildConfigProjectProperty plugin="openshift-sync@1.0.27">
+          <uid></uid>
+          <namespace></namespace>
+          <name></name>
+          <resourceVersion></resourceVersion>
+        </io.fabric8.jenkins.openshiftsync.BuildConfigProjectProperty>
+        <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty/>
+        <org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty/>
+      </properties>
+      <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
+        <script>// Pipeline global variables/parameters
+    def prefix               = &apos;_PREFIX_&apos;
+    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
+    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
+    def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
+    
+    // Helper variable for prefix substitution with double sed-ed templates.
+    def prefix_label          = &apos;PREFIX&apos;
+    def acr_secret_name_label = &apos;REGISTRY_SECRET_NAME&apos;
+    def image_label           = &apos;IMAGE&apos;
+    
+    def jenkins_namespace    = &quot;${prefix}jenkins&quot;
+    def components_namespace = &quot;${prefix}components&quot;
+    def tasks_dev_namespace  = &quot;${prefix}tasks-dev&quot;
+    def tasks_prod_namespace = &quot;${prefix}tasks-prod&quot;
+    
+    def sonarqube_url        = &quot;${prefix}sonarqube.${prefix}components.svc.cluster.local&quot;
+    def nexus_url            = &quot;http://admin:admin123@${prefix}nexus3.${prefix}components.svc.cluster.local:8081&quot;
+    def tasks_dev_url        = &quot;http://${prefix}tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;
+    //def tasks_prod_url       = &quot;http://${prefix}tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
+    
+    def maven_config_file    = &apos;nexus_openshift_settings.xml&apos;
+    def mvnCmd               = &quot;mvn -s ./${maven_config_file}&quot;
+    
+    // Blue/Green deployment in production
+    def gb_destination       = &apos;green&apos;
+    def gb_active            = &apos;&apos;
+    
+    // Convenience Functions to read variables from the pom.xml
+    // Do not change anything below this line.
+    def getVersionFromPom(pom) {
+      def matcher = readFile(pom) =~ &apos;&lt;version&gt;(.+)&lt;/version&gt;&apos;
+      matcher ? matcher[0][1] : null
+    }
+    
+    def getGroupIdFromPom(pom) {
+      def matcher = readFile(pom) =~ &apos;&lt;groupId&gt;(.+)&lt;/groupId&gt;&apos;
+      matcher ? matcher[0][1] : null
+    }
+    
+    def getArtifactIdFromPom(pom) {
+      def matcher = readFile(pom) =~ &apos;&lt;artifactId&gt;(.+)&lt;/artifactId&gt;&apos;
+      matcher ? matcher[0][1] : null
+    }
+    
+    pipeline {
+      agent {
+        kubernetes {
+          label &apos;jenkins-maven-agent&apos;
+          cloud &apos;openshift&apos;
+          yaml &quot;&quot;&quot;
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        pod: jenkins-maven-agent
+    spec:
+      imagePullSecrets:
+      - name: ${acr_secret_name}
+      containers:
+      - name: maven
+        image: ${maven_image}
+        command:
+        - cat
+        tty: true
+        securityContext:
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+      - name: jnlp
+        env:
+        - name: JENKINS_URL
+          value: &apos;http://${prefix}jenkins.${prefix}jenkins.svc.cluster.local:8080/&apos;
+        - name: JENKINS_TUNNEL
+          value: &apos;${prefix}jenkins-jnlp.${prefix}jenkins.svc.cluster.local:50000&apos;
+        securityContext:
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+      - name: kaniko
+        image: gcr.io/kaniko-project/executor:debug
+        imagePullPolicy: Always
+        command:
+        - /busybox/cat
+        tty: true
+        volumeMounts:
+          - name: jenkins-docker-cfg
+            mountPath: /kaniko/.docker
+      volumes:
+      - name: jenkins-docker-cfg
+        projected:
+          sources:
+          - secret:
+              name: ${acr_secret_name}
+              items:
+                - key: .dockerconfigjson
+                  path: config.json
+    &quot;&quot;&quot;
+        }
+      }
+      
+      environment {
+        PATH = &apos;/opt/rh/rh-maven35/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/gradle/bin&apos;
+        
+        def groupId    = null
+        def artifactId = null
+        def version    = null
+        
+        // Label for container images and builds for testing.
+        def build_tag  = null
+      }
+      
+      stages {
+        stage(&apos;Check Environment&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              sh &apos;mvn --version&apos;
+              sh &apos;skopeo --version&apos;
+              sh &apos;kubectl version 2&gt;/dev/null || echo -n&apos;
+            }
+          }
+        }
+        
+        stage(&apos;Checkout SCM &apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              // Checkout code from SCM
+              checkout([
+                $class: &apos;GitSCM&apos;,
+                branches: [[name: &apos;*/master&apos;]],
+                doGenerateSubmoduleConfigurations: false,
+                extensions: [],
+                submoduleCfg: [],
+                userRemoteConfigs: [[url: git_repo_url]]])
+            }
+          }
+        }
+        
+        stage(&apos;Setup maven configuration&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              // Set global variables according the code from SCM
+              script {
+                groupId    = getGroupIdFromPom(&quot;pom.xml&quot;)
+                artifactId = getArtifactIdFromPom(&quot;pom.xml&quot;)
+                version    = getVersionFromPom(&quot;pom.xml&quot;)
+                
+                build_tag    = &quot;${version}-${BUILD_NUMBER}&quot;
+              }
+              
+              // Setup correct URL to nexus service in config XML file.
+              sh &quot;sed -i &apos;s;&lt;url&gt;http://.*:8081;&lt;url&gt;${nexus_url};&apos; ${maven_config_file}&quot;
+    
+              // Set current nexus admin password in maven config for uploading artefacts
+              // to nexus repos.
+              //sh &quot;sed -i &apos;s@&lt;password&gt;.*&lt;/password&gt;@&lt;password&gt;${nexus_admin_password}&lt;/password&gt;@&apos; ${maven_config_file}&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Test Env Variables&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &quot;groupId ${groupId}&quot;
+              echo &quot;artifactId ${artifactId}&quot;
+              echo &quot;version ${version}&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Compile Source Code&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &apos;Trying to compile application source code&apos;
+              sh &quot;${mvnCmd} clean package -DskipTests&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Execute Unit Tests&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &apos;Running JUnit tests&apos;
+              sh &quot;${mvnCmd} test&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Source Code Analysis&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &apos;Running Sonar scans&apos;
+              sh &quot;${mvnCmd} sonar:sonar -Dsonar.host.url=http://${sonarqube_url}:9000 -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${build_tag}&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Promote Binary Artifacts&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &quot;Publish to Nexus&quot;
+              sh &quot;${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::${nexus_url}/repository/releases&quot;
+            }
+          }
+        }
+       
+        stage(&apos;Build and Push Docker Image&apos;){
+          steps {
+            container(name: &apos;kaniko&apos;, shell: &apos;/busybox/sh&apos;) {
+               withEnv([&apos;PATH+EXTRA=/busybox&apos;]) {
+                 sh &quot;&quot;&quot;#!/busybox/sh
+                   set -x
+                   mkdir /workspace &amp;&amp; cd /workspace
+                   
+    cat &gt; /workspace/Dockerfile &lt;&lt; EOF
+    FROM jboss/wildfly:latest
+    RUN curl ${nexus_url}/repository/releases/org/jboss/quickstarts/eap/tasks/${version}/tasks-${version}.war \
+          --output /opt/jboss/wildfly/standalone/deployments/tasks-${version}.war
+    RUN mkdir -p /opt/jboss/configuration &amp;&amp; \
+        mv /opt/jboss/wildfly/standalone/configuration/application-*properties /opt/jboss/configuration &amp;&amp; \
+        ln -s /opt/jboss/configuration/application-roles.properties /opt/jboss/wildfly/standalone/configuration/application-roles.properties &amp;&amp; \
+        ln -s /opt/jboss/configuration/application-users.properties /opt/jboss/wildfly/standalone/configuration/application-users.properties
+    EOF
+    
+                   /kaniko/executor \
+                     --context /workspace \
+                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
+                 &quot;&quot;&quot;
+               }
+            }
+          }
+        }
+    
+        stage(&apos;Deploy Application into DEV&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &quot;Deploying container image to Development Project&quot;
+              
+              sh &quot;kubectl --namespace=${tasks_dev_namespace} delete all,configmap,replicaset --all --ignore-not-found=true&quot;
+              
+              sh &quot;&quot;&quot;
+                kubectl --namespace=${tasks_dev_namespace} create configmap ${prefix}tasks-config \
+                  --from-file=./configuration/application-users.properties \
+                  --from-file=./configuration/application-roles.properties
+              &quot;&quot;&quot;
+              
+              create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
+                _${prefix_label}_ ${prefix} \
+                _${acr_secret_name_label}_ ${acr_secret_name} \
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
+              &quot;&quot;&quot;)
+            }
+          }
+        }
+        
+        stage(&apos;Perform Integration Tests&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &quot;Running Integration Tests&quot;
+              //sleep 30
+              
+              // Wait till pod is ready
+              wait_for_deployment_ready(tasks_dev_namespace, &quot;${prefix}tasks&quot;)
+              
+              // Wait and check if service is already available
+              sh &quot;&quot;&quot;
+                COUNTER=0
+                while true;
+                do
+                  curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${tasks_dev_url} &amp;&amp; break
+                  sleep 10
+                  let COUNTER=\$COUNTER+1
+                  [ \$COUNTER -eq 10 ] &amp;&amp; exit 1
+                done
+              &quot;&quot;&quot;
+              
+              // Create a new task called &quot;integration_test_1&quot;
+              echo &quot;Creating task&quot;
+              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X POST ${tasks_dev_url}/ws/tasks/integration_test_1&quot;
+    
+              // Retrieve task with id &quot;1&quot;
+              echo &quot;Retrieving tasks&quot;
+              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${tasks_dev_url}/ws/tasks/1&quot;
+    
+              // Delete task with id &quot;1&quot;
+              echo &quot;Deleting tasks&quot;
+              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X DELETE ${tasks_dev_url}/ws/tasks/1&quot;
+            }
+          }
+        }
+        
+        stage(&apos;Deploy Application into PROD&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              echo &quot;Deploying container image to Production Project&quot;
+              
+              script {
+                gb_active = sh(
+                  returnStdout: true,
+                  script: &quot;kubectl get ingress ${prefix}application-prod -n ${tasks_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
+                ).trim()
+    
+                if (gb_active == &apos;green-tasks&apos;) {
+                  gb_destination = &apos;blue&apos;
+                } else {
+                  gb_destination = &apos;green&apos;
+                }
+              }
+    
+              sh &quot;kubectl --namespace=${tasks_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-tasks&apos; --ignore-not-found=true&quot;
+    
+              sh &quot;&quot;&quot;
+                kubectl --namespace=${tasks_prod_namespace} delete configmap ${gb_destination}-tasks-config \
+                  --ignore-not-found=true
+                kubectl --namespace=${tasks_prod_namespace} create configmap ${gb_destination}-tasks-config \
+                  --from-file=./configuration/application-users.properties \
+                  --from-file=./configuration/application-roles.properties
+              &quot;&quot;&quot;
+    
+              create_from_template(tasks_prod_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
+                _${prefix_label}_ &quot;${gb_destination}-&quot; \
+                _${acr_secret_name_label}_ ${acr_secret_name} \
+                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
+              &quot;&quot;&quot;)
+            }
+          }
+        }
+        
+        stage(&apos;Switch to new Version&apos;) {
+          steps {
+            container(&apos;maven&apos;) {
+              input &quot;Switch Production?&quot;
+    
+              sh &quot;&quot;&quot;
+                kubectl patch ingress ${prefix}application-prod \
+                  -n ${tasks_prod_namespace} \
+                  --type=json \
+                  -p=&apos;[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/rules/0/http/paths/0/backend/serviceName&quot;, &quot;value&quot;:&quot;${gb_destination}-tasks&quot;}]&apos;
+              &quot;&quot;&quot;
+            }
+          }
+        }
+      }
+    }
+    
+    def get_pod_name(namespace, app_name) {
+      return sh (
+        script: &quot;kubectl --namespace $namespace get pod | grep &apos;^$app_name&apos; | awk &apos;{ print \$1 }&apos;&quot;,
+        returnStdout: true
+      ).trim()
+    }
+    
+    def create_from_template(namespace, request) {
+      sh &quot;&quot;&quot;
+        TMP_DIR=\$(mktemp -d)
+    
+        function create_from_template {
+          FILE=\$1; shift
+    
+          if [ ! -f &quot;\$FILE&quot; ]; then
+            echo &quot;ERROR: File &apos;\$FILE&apos; doesn&apos;t exist!&quot;
+            exit 1
+          fi
+    
+          set -x
+          cp \$FILE &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
+    
+          while (( &quot;\$#&quot; )); do
+            #echo &quot;Replacing parameter: \$1 -&gt; \$2&quot;
+            sed -i &apos;s@&apos;\$1&apos;@&apos;\$2&apos;@g&apos; &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
+            shift
+            shift
+          done
+    
+          if [ &quot;$namespace&quot; == &quot;&quot; ]; then
+            kubectl create -f &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
+          else
+            kubectl --namespace $namespace create -f &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
+          fi
+          set +x
+        }
+        
+        create_from_template $request
+    
+        rm -rf \$TMP_DIR
+      &quot;&quot;&quot;
+    }
+    
+    def wait_for_deployment_ready(namespace, deployment) {
+      sh &quot;&quot;&quot;
+        while true;
+        do
+          READY=\$(kubectl --namespace $namespace get deployment $deployment -o=custom-columns=AVAILABLE:.status.availableReplicas --no-headers)
+          echo \$READY
+          if [ \$READY -ge 1 ]; then
+            break
+          fi
+          
+          sleep 10
+        done
+      &quot;&quot;&quot;
+    }</script>
+        <sandbox>true</sandbox>
+      </definition>
+      <triggers/>
+      <disabled>false</disabled>
+    </flow-definition>

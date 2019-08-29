@@ -1,0 +1,56 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ include "sonarqube.fullname" . }}
+  name: {{ include "sonarqube.fullname" . }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: {{ include "sonarqube.fullname" . }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ include "sonarqube.fullname" . }}
+    spec:
+      containers:
+      - image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: {{ .Chart.Name }}
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        envFrom:
+        - configMapRef:
+            name: {{ include "sonarqube.fullname" . }}-env-config
+        volumeMounts:
+        - mountPath: /opt/sonarqube/data
+          name: sonarqube-data
+      initContainers:
+      - name: setup-datadir
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - chown 999:998 /mnt/
+        volumeMounts:
+        - mountPath: /mnt
+          name: sonarqube-data
+      volumes:
+      - name: sonarqube-data
+        persistentVolumeClaim:
+          claimName: {{ include "sonarqube.fullname" . }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
