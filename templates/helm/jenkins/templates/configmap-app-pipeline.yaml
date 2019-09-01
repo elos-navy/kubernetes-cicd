@@ -3,8 +3,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: _PREFIX_jenkins
-  name: _PREFIX_app-job
+    app: {{ include "jenkins.fullname" . }}
+  name: {{ include "jenkins.fullname" . }}-app-pipeline-job
 data:
   config.xml: |-
     <?xml version='1.1' encoding='UTF-8'?>
@@ -32,11 +32,11 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
-    def prefix               = &apos;_PREFIX_&apos;
-    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
-    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def prefix               = &apos;-cicd&apos;
+    def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
+    def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
-    def git_repo_url         = &apos;_APPLICATION_GIT_URL_&apos;
+    def git_repo_url         = &apos;{{ .Values.application.gitUrl }}&apos;
     
     // Helper variable for prefix substitution with double sed-ed templates.
     def prefix_label          = &apos;PREFIX&apos;

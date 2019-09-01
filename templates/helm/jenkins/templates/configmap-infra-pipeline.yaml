@@ -3,8 +3,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: _PREFIX_jenkins
-  name: _PREFIX_components-job
+    app: {{ include "jenkins.fullname" . }}
+  name: {{ include "jenkins.fullname" . }}-infra-pipeline-job
 data:
   config.xml: |-
     <?xml version='1.1' encoding='UTF-8'?>
@@ -31,18 +31,19 @@ data:
         <org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty/>
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
-        <script>def source_git_repo      = &apos;https://github.com/elos-tech/kubernetes-cicd.git&apos;
-    def name_prefix          = &apos;_PREFIX_&apos;
+        <script>
+    def source_git_repo      = &apos;{{ .Values.infra.gitUrl }}&apos;
+    def name_prefix          = &apos;cicd-&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
-    def dns_domain           = &apos;_DNS_ZONE_NAME_&apos;
+    def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
     def jenkins_namespace    = &quot;${name_prefix}jenkins&quot;
     def components_namespace = &quot;${name_prefix}components&quot;
     def app_dev_namespace    = &quot;${name_prefix}tasks-dev&quot;
     def app_prod_namespace   = &quot;${name_prefix}tasks-prod&quot;
     def nexus_admin_password = &apos;admin123&apos;
     
-    def acr_hostname         = &apos;_REGISTRY_HOSTNAME_&apos;
-    def acr_secret_name      = &apos;_REGISTRY_SECRET_NAME_&apos;
+    def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
+    def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
     def agent_image          = &quot;${acr_hostname}/${name_prefix}jenkins/jenkins-agent&quot;
     
     

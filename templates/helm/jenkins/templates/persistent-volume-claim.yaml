@@ -2,9 +2,9 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: _PREFIX_jenkins-pv-claim
+  name: {{ include "jenkins.fullname" . }}-pv-claim
   labels:
-    app: _PREFIX_jenkins
+    app: {{ include "jenkins.fullname" . }}
 spec:
   accessModes:
     - ReadWriteOnce

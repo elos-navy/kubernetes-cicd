@@ -2,11 +2,30 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+name: jenkins
+
+containerRegistry:
+  hostname: docker.io
+  secretName: registry-secret
+
+application:
+  jobName: app-pipeline-job
+  gitUrl: https://github.com/elos-tech/openshift-cicd-app.git
+
+infra:
+  jobName: infra-pipeline-job
+  gitUrl: https://github.com/elos-tech/kubernetes-cicd.git
+
+dnsDomain: example.com
+
+master:
+  adminPassword: admin
+
 replicaCount: 1
 
 image:
-  repository: nginx
-  tag: stable
+  repository: openshift/jenkins-2-centos7
+  tag: latest
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -15,7 +34,8 @@ fullnameOverride: ""
 
 service:
   type: ClusterIP
-  port: 80
+  port: 8080
+  targetPort: 8080
 
 ingress:
   enabled: false
