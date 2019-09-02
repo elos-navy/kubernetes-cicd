@@ -72,12 +72,19 @@ handle_error "Unable to login with service principal credentials!"
 az account set --subscription "$SUBSCRIPTION_ID"
 handle_error "Unable to set to subscription ${SUBSCRIPTION_ID}"
 
-az aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --admin
+az aks get-credentials \
+  --resource-group "${RESOURCE_GROUP}" \
+  --name "${CLUSTER_NAME}" \
+  --admin
 handle_error "Unable to set credentials!"
 
 kubectl get nodes
 handle_error "kubectl not configured correctly. Not connected to cluster!"
 
+# Ingress controller
+install_helm
+install_ingress_controller
+install_cert_manager
 
 # Enable App routing addon and obtain DNS zone name.
 # Store zone name for command to return it to ARM deployment output.
@@ -85,16 +92,17 @@ azure_enable_application_routing_addon
 echo $DNS_ZONE_NAME > /http_application_routing_zone
 
 # Jenkins Namespace
-create_from_template templates/jenkins-namespace.yaml \
-  _PREFIX_ $PREFIX
+#create_from_template templates/jenkins-namespace.yaml \
+#  _PREFIX_ $PREFIX
+kubectl create ns ${PREFIX}jenkins
 kubectl config set-context $(kubectl config current-context) --namespace=${PREFIX}jenkins
 
 # Create secret containing jenkins admin password.
-SECRET_FILE="$(mktemp -d)/password"
-echo -n $JENKINS_ADMIN_PASSWORD > $SECRET_FILE
-kubectl create secret generic $JENKINS_ADMIN_PASSWORD_SECRET_NAME \
-  --from-file=$SECRET_FILE
-rm -f $SECRET_FILE
+#SECRET_FILE="$(mktemp -d)/password"
+#echo -n $JENKINS_ADMIN_PASSWORD > $SECRET_FILE
+#kubectl create secret generic $JENKINS_ADMIN_PASSWORD_SECRET_NAME \
+#  --from-file=$SECRET_FILE
+#rm -f $SECRET_FILE
 
 # ACR credentials and hostname are used with jenkins/pipeline deployment
 # and later for building jenkins agent container image.
@@ -104,20 +112,27 @@ ACR_PASSWORD=$(echo $ACR_CREDENTIALS | jq '.passwords[0].value' | sed 's/"//g')
 ACR_HOSTNAME=$(az acr show -n $REGISTRY_NAME | jq '.loginServer' | sed 's/"//g')
 
 # Jenkins
-create_from_template templates/jenkins-persistent.yaml \
-  _PREFIX_ "$PREFIX" \
-  _APPLICATION_GIT_URL_ "$APPLICATION_GIT_URL" \
-  _REGISTRY_HOSTNAME_ "$ACR_HOSTNAME" \
-  _REGISTRY_SECRET_NAME_ "$REGISTRY_SECRET_NAME" \
-  _JENKINS_ADMIN_PASSWORD_SECRET_ "$JENKINS_ADMIN_PASSWORD_SECRET_NAME" \
-  _COMPONENTS_PIPELINE_JOB_NAME_ 'cicd-components-pipeline' \
-  _APP_PIPELINE_JOB_NAME_ 'cicd-app-pipeline' \
-  _DNS_ZONE_NAME_ "$DNS_ZONE_NAME"
-
-# Ingress controller
-install_helm
-install_ingress_controller
-install_cert_manager
+#create_from_template templates/jenkins-persistent.yaml \
+#  _PREFIX_ "$PREFIX" \
+#  _APPLICATION_GIT_URL_ "$APPLICATION_GIT_URL" \
+#  _REGISTRY_HOSTNAME_ "$ACR_HOSTNAME" \
+#  _REGISTRY_SECRET_NAME_ "$REGISTRY_SECRET_NAME" \
+#  _JENKINS_ADMIN_PASSWORD_SECRET_ "$JENKINS_ADMIN_PASSWORD_SECRET_NAME" \
+#  _COMPONENTS_PIPELINE_JOB_NAME_ 'cicd-components-pipeline' \
+#  _APP_PIPELINE_JOB_NAME_ 'cicd-app-pipeline' \
+#  _DNS_ZONE_NAME_ "$DNS_ZONE_NAME"
+cd templates/helm
+helm install \
+  --name jenkins \
+  --namespace ${PREFIX}jenkins \
+  --set name='jenkins' \
+  --set containerRegistry.hostname="$ACR_HOSTNAME" \
+  --set containerRegistry.secretName="$REGISTRY_SECRET_NAME" \
+  --set application.gitUrl="$APPLICATION_GIT_URL" \
+  --set dnsDomain="$DNS_ZONE_NAME" \
+  --set master.adminPassword="$JENKINS_ADMIN_PASSWORD" \
+  jenkins
+cd -
 
 # Build and push jenkins agents to ACR registry
 az acr build -t ${PREFIX}jenkins/jenkins-agent:latest -r $REGISTRY_NAME artefacts/jenkins-agent/
@@ -130,12 +145,12 @@ kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
     --docker-password=$ACR_PASSWORD \
     --docker-email='info@elostech.cz'
 
-create_from_template templates/ingress/tls-ingress.yaml \
-  _RESOURCE_NAME_ 'jenkins' \
-  _DNS_NAME_ "jenkins.$DNS_ZONE_NAME" \
-  _NAMESPACE_ "${PREFIX}jenkins" \
-  _SERVICE_NAME_ "${PREFIX}jenkins" \
-  _SERVICE_PORT_ 8080
+#create_from_template templates/ingress/tls-ingress.yaml \
+#  _RESOURCE_NAME_ 'jenkins' \
+#  _DNS_NAME_ "jenkins.$DNS_ZONE_NAME" \
+#  _NAMESPACE_ "${PREFIX}jenkins" \
+#  _SERVICE_NAME_ "${PREFIX}jenkins" \
+#  _SERVICE_PORT_ 8080
 
 # Setup wildcard DNS record for apps. This uses domain provided
 # by HTTP Application Routing AKS addon enabled above.
