@@ -81,8 +81,9 @@ handle_error "Unable to set credentials!"
 kubectl get nodes
 handle_error "kubectl not configured correctly. Not connected to cluster!"
 
-# Ingress controller
 install_helm
+
+# Ingress controller
 install_ingress_controller
 install_cert_manager
 
@@ -111,6 +112,13 @@ ACR_USERNAME=$(echo $ACR_CREDENTIALS | jq '.username' | sed 's/"//g')
 ACR_PASSWORD=$(echo $ACR_CREDENTIALS | jq '.passwords[0].value' | sed 's/"//g')
 ACR_HOSTNAME=$(az acr show -n $REGISTRY_NAME | jq '.loginServer' | sed 's/"//g')
 
+# Create k8s secret for pulling images from ACR registry.
+kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
+    --docker-server=$ACR_HOSTNAME \
+    --docker-username=$ACR_USERNAME \
+    --docker-password=$ACR_PASSWORD \
+    --docker-email='info@elostech.cz'
+
 # Jenkins
 #create_from_template templates/jenkins-persistent.yaml \
 #  _PREFIX_ "$PREFIX" \
@@ -137,13 +145,6 @@ cd -
 # Build and push jenkins agents to ACR registry
 az acr build -t ${PREFIX}jenkins/jenkins-agent:latest -r $REGISTRY_NAME artefacts/jenkins-agent/
 az acr build -t ${PREFIX}jenkins/jenkins-agent-maven:latest -r $REGISTRY_NAME artefacts/jenkins-agent-maven/
-
-# Set k8s secret for pulling images from ACR registry
-kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
-    --docker-server=$ACR_HOSTNAME \
-    --docker-username=$ACR_USERNAME \
-    --docker-password=$ACR_PASSWORD \
-    --docker-email='info@elostech.cz'
 
 #create_from_template templates/ingress/tls-ingress.yaml \
 #  _RESOURCE_NAME_ 'jenkins' \
