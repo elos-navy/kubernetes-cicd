@@ -82,8 +82,6 @@ kubectl get nodes
 handle_error "kubectl not configured correctly. Not connected to cluster!"
 
 install_helm
-
-# Ingress controller
 install_ingress_controller
 install_cert_manager
 
@@ -95,8 +93,8 @@ echo $DNS_ZONE_NAME > /http_application_routing_zone
 # Jenkins Namespace
 #create_from_template templates/jenkins-namespace.yaml \
 #  _PREFIX_ $PREFIX
-kubectl create ns ${PREFIX}jenkins
-kubectl config set-context $(kubectl config current-context) --namespace=${PREFIX}jenkins
+kubectl create ns $JENKINS_RESOURCE_NAME
+kubectl config set-context $(kubectl config current-context) --namespace=$JENKINS_RESOURCE_NAME
 
 # Create secret containing jenkins admin password.
 #SECRET_FILE="$(mktemp -d)/password"
@@ -131,9 +129,9 @@ kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
 #  _DNS_ZONE_NAME_ "$DNS_ZONE_NAME"
 cd templates/helm
 helm install \
-  --name jenkins \
-  --namespace ${PREFIX}jenkins \
-  --set name='jenkins' \
+  --name "$JENKINS_RESOURCE_NAME" \
+  --namespace "$JENKINS_RESOURCE_NAME" \
+  --set name="$JENKINS_RESOURCE_NAME" \
   --set containerRegistry.hostname="$ACR_HOSTNAME" \
   --set containerRegistry.secretName="$REGISTRY_SECRET_NAME" \
   --set application.gitUrl="$APPLICATION_GIT_URL" \
@@ -142,9 +140,16 @@ helm install \
   jenkins
 cd -
 
-# Build and push jenkins agents to ACR registry
-az acr build -t ${PREFIX}jenkins/jenkins-agent:latest -r $REGISTRY_NAME artefacts/jenkins-agent/
-az acr build -t ${PREFIX}jenkins/jenkins-agent-maven:latest -r $REGISTRY_NAME artefacts/jenkins-agent-maven/
+# Build and push jenkins agent container images to ACR registry.
+az acr build \
+  -t ${JENKINS_RESOURCE_NAME}/jenkins-agent:latest \
+  -r $REGISTRY_NAME \
+  artefacts/jenkins-agent/
+
+az acr build \
+  -t ${JENKINS_RESOURCE_NAME}jenkins/jenkins-agent-maven:latest \
+  -r $REGISTRY_NAME \
+  artefacts/jenkins-agent-maven/
 
 #create_from_template templates/ingress/tls-ingress.yaml \
 #  _RESOURCE_NAME_ 'jenkins' \
@@ -160,6 +165,7 @@ azure_setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
 
 # Wait for jenkins pod to be ready. So after ARM deployment jenkins
 # should be ready and available.
-wait_for_deployment_ready "${PREFIX}jenkins" "app=${PREFIX}jenkins"
+#wait_for_deployment_ready "${PREFIX}jenkins" "app=${PREFIX}jenkins"
+wait_for_deployment_ready "$JENKINS_RESOURCE_NAME" "app=$JENKINS_RESOURCE_NAME"
 
 rm -rf $TMP_DIR
