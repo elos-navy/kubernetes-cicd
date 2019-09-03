@@ -33,11 +33,12 @@ data:
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>
     def source_git_repo      = &apos;{{ .Values.infra.gitUrl }}&apos;
+    def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
     def name_prefix          = &apos;cicd-&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
     def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
-    def jenkins_namespace    = &quot;${name_prefix}jenkins&quot;
-    def components_namespace = &quot;${name_prefix}components&quot;
+    def jenkins_namespace    = &quot;{{ include "jenkins.fullname" . }}&quot;
+    def infra_namespace      = &quot;${name_prefix}infra&quot;
     def app_dev_namespace    = &quot;${name_prefix}tasks-dev&quot;
     def app_prod_namespace   = &quot;${name_prefix}tasks-prod&quot;
     def nexus_admin_password = &apos;admin123&apos;
@@ -73,9 +74,9 @@ data:
       - name: jnlp
         env:
         - name: JENKINS_URL
-          value: &apos;http://${name_prefix}jenkins.${name_prefix}jenkins.svc.cluster.local:8080/&apos;
+          value: &apos;http://${resource_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
         - name: JENKINS_TUNNEL
-          value: &apos;${name_prefix}jenkins-jnlp.${name_prefix}jenkins.svc.cluster.local:50000&apos;
+          value: &apos;${resource_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
         securityContext:
           runAsUser: 1001
           allowPrivilegeEscalation: false
@@ -106,7 +107,7 @@ data:
         stage(&apos;Cleanup&apos;) {
           steps {
             container(&apos;agent&apos;) {
-              delete_namespace(components_namespace)
+              delete_namespace(infra_namespace)
               delete_namespace(app_dev_namespace)
               delete_namespace(app_prod_namespace)
         
@@ -123,10 +124,10 @@ data:
           }
         }
         
-        stage(&apos;Create Components namespace&apos;) {
+        stage(&apos;Create Infra namespace&apos;) {
           steps {
             container(&apos;agent&apos;) {
-              create_from_template &apos;default&apos;, &quot;templates/components-namespace.yaml _${prefix_label}_ $name_prefix&quot;
+              create_from_template &apos;default&apos;, &quot;templates/infra-namespace.yaml _${prefix_label}_ $name_prefix&quot;
             }
           }
         }
@@ -137,7 +138,7 @@ data:
               sh &quot;&quot;&quot;
                 cd templates/helm
                 helm install \
-                  --namespace ${components_namespace} \
+                  --namespace ${infra_namespace} \
                   --name cicd \
                   --set fqdn=&apos;nexus.${dns_domain}&apos; \
                   nexus
@@ -148,28 +149,28 @@ data:
         
       /*
       stage(&apos;Create Nexus&apos;) {
-        create_from_template components_namespace, &quot;templates/nexus.yaml _${prefix_label}_ $name_prefix&quot;
-        create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
+        create_from_template infra_namespace, &quot;templates/nexus.yaml _${prefix_label}_ $name_prefix&quot;
+        create_from_template infra_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
           _RESOURCE_NAME_ &quot;${name_prefix}nexus3&quot; \
           _DNS_NAME_ &quot;nexus.${dns_domain}&quot; \
-          _NAMESPACE_ &quot;${components_namespace}&quot; \
+          _NAMESPACE_ &quot;${infra_namespace}&quot; \
           _SERVICE_NAME_ &quot;${name_prefix}nexus3&quot; \
           _SERVICE_PORT_ 8081
         &quot;&quot;&quot;
-        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}nexus3&quot;)
+        wait_for_deployment_ready(infra_namespace, &quot;${name_prefix}nexus3&quot;)
     
         // Get nexus pod name    
-        def pod_name = get_pod_name(components_namespace, &quot;${name_prefix}nexus3&quot;)
+        def pod_name = get_pod_name(infra_namespace, &quot;${name_prefix}nexus3&quot;)
         
         // Wait till nexus service API is available
         sh &quot;&quot;&quot;
-          kubectl --namespace ${components_namespace} cp artefacts/initialize_nexus_repos.sh $pod_name:/tmp/
-          #kubectl --namespace ${components_namespace} cp artefacts/setup_nexus3.sh $pod_name:/tmp/
+          kubectl --namespace ${infra_namespace} cp artefacts/initialize_nexus_repos.sh $pod_name:/tmp/
+          #kubectl --namespace ${infra_namespace} cp artefacts/setup_nexus3.sh $pod_name:/tmp/
           
           FAILED=0
           while true
           do
-            kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash \
+            kubectl --namespace ${infra_namespace} exec $pod_name -- /bin/bash \
               /tmp/initialize_nexus_repos.sh \
                 --connection_check \
                 --url http://localhost:8081 || FAILED=1
@@ -184,7 +185,7 @@ data:
         
         // Get nexus admin password
         //nexus_admin_password = sh (
-        //  script: &quot;kubectl --namespace ${components_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password&quot;,
+        //  script: &quot;kubectl --namespace ${infra_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password&quot;,
         //  returnStdout: true
         //).trim()
         
@@ -192,9 +193,9 @@ data:
         // in future releases, but for now let&apos;s use standard admin pasword
         // admin123.
         sh &quot;&quot;&quot;
-          ADMIN_PASSWORD=\$(kubectl --namespace ${components_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password)
+          ADMIN_PASSWORD=\$(kubectl --namespace ${infra_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password)
           
-          kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash \
+          kubectl --namespace ${infra_namespace} exec $pod_name -- /bin/bash \
             /tmp/initialize_nexus_repos.sh \
               --user admin \
               --password \$ADMIN_PASSWORD \
@@ -207,7 +208,7 @@ data:
         
         // Initialize nexus repositories
         sh &quot;&quot;&quot;
-          kubectl --namespace ${components_namespace} exec $pod_name -- /bin/bash \
+          kubectl --namespace ${infra_namespace} exec $pod_name -- /bin/bash \
             /tmp/initialize_nexus_repos.sh \
               --user admin \
               --password &apos;${nexus_admin_password}&apos; \
@@ -219,7 +220,7 @@ data:
       }
       
       stage(&apos;Create Sonarqube&apos;) {
-        create_from_template components_namespace, &quot;&quot;&quot;templates/postgresql-persistent.yaml \
+        create_from_template infra_namespace, &quot;&quot;&quot;templates/postgresql-persistent.yaml \
           _${prefix_label}_ ${name_prefix}sonar- \
           _POSTGRES_DB_ sonar \
           _POSTGRES_USER_ sonar \
@@ -228,25 +229,25 @@ data:
         &quot;&quot;&quot;
         
         // Wait for deployment of sonarqube until postgres is ready to handle requests.
-        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}sonar-postgres&quot;)
+        wait_for_deployment_ready(infra_namespace, &quot;${name_prefix}sonar-postgres&quot;)
         
-        create_from_template components_namespace, &quot;&quot;&quot;templates/sonarqube.yaml \
+        create_from_template infra_namespace, &quot;&quot;&quot;templates/sonarqube.yaml \
           _${prefix_label}_ ${name_prefix} \
           _POSTGRES_DB_ sonar \
           _POSTGRES_USER_ sonar \
           _POSTGRES_PASSWORD_ sonar \
           _DATABASE_SERVICE_NAME_ postgresql-sonarqube \
-          _COMPONENTS_NAMESPACE_ &quot;${components_namespace}&quot;
+          _COMPONENTS_NAMESPACE_ &quot;${infra_namespace}&quot;
         &quot;&quot;&quot;
     
-        create_from_template components_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
+        create_from_template infra_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
           _RESOURCE_NAME_ &quot;${name_prefix}sonarqube&quot; \
           _DNS_NAME_ &quot;sonarqube.${dns_domain}&quot; \
-          _NAMESPACE_ &quot;${components_namespace}&quot; \
+          _NAMESPACE_ &quot;${infra_namespace}&quot; \
           _SERVICE_NAME_ &quot;${name_prefix}sonarqube&quot; \
           _SERVICE_PORT_ 9000
         &quot;&quot;&quot;
-        wait_for_deployment_ready(components_namespace, &quot;${name_prefix}sonarqube&quot;)
+        wait_for_deployment_ready(infra_namespace, &quot;${name_prefix}sonarqube&quot;)
       }
       
       stage(&apos;Create DEV namespace&apos;) {
