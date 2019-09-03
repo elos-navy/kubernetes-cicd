@@ -32,23 +32,25 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
-    def prefix               = &apos;-cicd&apos;
+
     def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
+    def jenkins_namespace    = &quot;${{ .Release.Namespace }}&quot;
+
+    def components_namespace = &quot;${prefix}components&quot;
+    def tasks_dev_namespace  = &quot;${prefix}tasks-dev&quot;
+    def tasks_prod_namespace = &quot;${prefix}tasks-prod&quot;
+ 
+    def prefix               = &apos;-cicd&apos;
     def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
     def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
-    def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
+    def maven_image          = &quot;${acr_hostname}/${jenkins_name}/jenkins-agent-appdev&quot;
     def git_repo_url         = &apos;{{ .Values.application.gitUrl }}&apos;
     
     // Helper variable for prefix substitution with double sed-ed templates.
     def prefix_label          = &apos;PREFIX&apos;
     def acr_secret_name_label = &apos;REGISTRY_SECRET_NAME&apos;
-    def image_label           = &apos;IMAGE&apos;
-    
-    def jenkins_namespace    = &quot;${prefix}jenkins&quot;
-    def components_namespace = &quot;${prefix}components&quot;
-    def tasks_dev_namespace  = &quot;${prefix}tasks-dev&quot;
-    def tasks_prod_namespace = &quot;${prefix}tasks-prod&quot;
-    
+    def image_label           = &apos;IMAGE&apos;   
+   
     def sonarqube_url        = &quot;${prefix}sonarqube.${prefix}components.svc.cluster.local&quot;
     def nexus_url            = &quot;http://admin:admin123@${prefix}nexus3.${prefix}components.svc.cluster.local:8081&quot;
     def tasks_dev_url        = &quot;http://${prefix}tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;

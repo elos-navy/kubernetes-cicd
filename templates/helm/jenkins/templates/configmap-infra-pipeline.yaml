@@ -32,12 +32,15 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>
+    def jenkins_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
+
+    def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
+
     def source_git_repo      = &apos;{{ .Values.infra.gitUrl }}&apos;
-    def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
+
     def name_prefix          = &apos;cicd-&apos;
     def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
     def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
-    def jenkins_namespace    = &quot;{{ include "jenkins.fullname" . }}&quot;
     def infra_namespace      = &quot;${name_prefix}infra&quot;
     def app_dev_namespace    = &quot;${name_prefix}tasks-dev&quot;
     def app_prod_namespace   = &quot;${name_prefix}tasks-prod&quot;
@@ -45,7 +48,7 @@ data:
     
     def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
     def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
-    def agent_image          = &quot;${acr_hostname}/${name_prefix}jenkins/jenkins-agent&quot;
+    def agent_image          = &quot;${acr_hostname}/${jenkins_namespace}/jenkins-agent&quot;
     
     
     pipeline {
@@ -74,9 +77,9 @@ data:
       - name: jnlp
         env:
         - name: JENKINS_URL
-          value: &apos;http://${resource_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
+          value: &apos;http://${jenkins_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
         - name: JENKINS_TUNNEL
-          value: &apos;${resource_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
+          value: &apos;${jenkins_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
         securityContext:
           runAsUser: 1001
           allowPrivilegeEscalation: false
