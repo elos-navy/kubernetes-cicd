@@ -6,7 +6,12 @@ fqdn: application.example.com
 
 jenkins:
   namespace: jenkins
-  servcieAccount: default
+  serviceAccount: default
+
+imageCredentials:
+  registry: quay.io
+  username: bob
+  password: bob
 
 replicaCount: 1
 
