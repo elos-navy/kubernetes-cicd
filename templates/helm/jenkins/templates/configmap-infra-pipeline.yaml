@@ -32,23 +32,22 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>
-    def jenkins_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
-
-    def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
-
     def source_git_repo      = &apos;{{ .Values.infra.gitUrl }}&apos;
-
-    def name_prefix          = &apos;cicd-&apos;
-    def prefix_label         = &apos;PREFIX&apos; // Helper variable for prefix substitution with double sed-ed templates.
+    def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
     def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
-    def infra_namespace      = &quot;${name_prefix}infra&quot;
-    def app_dev_namespace    = &quot;${name_prefix}tasks-dev&quot;
-    def app_prod_namespace   = &quot;${name_prefix}tasks-prod&quot;
+    
+    def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
+    def infra_namespace      = &quot;cicd-infra&quot;
+    def app_dev_namespace    = &quot;cicd-application-dev&quot;
+    def app_prod_namespace   = &quot;cicd-application-prod&quot;
+    
     def nexus_admin_password = &apos;admin123&apos;
     
-    def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
-    def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
-    def agent_image          = &quot;${acr_hostname}/${jenkins_namespace}/jenkins-agent&quot;
+    def registry_hostname    = &apos;{{ .Values.containerRegistry.hostname }}&apos;
+    def registry_username    = &apos;{{ .Values.containerRegistry.username }}&apos;
+    def registry_password    = &apos;{{ .Values.containerRegistry.password }}&apos;
+    def registry_secret_name = &apos;{{ .Values.containerRegistry.secretName }}&apos;
+    def agent_image          = &quot;${registry_hostname}/${jenkins_namespace}/jenkins-agent&quot;
     
     
     pipeline {
@@ -64,7 +63,7 @@ data:
         pod: jenkins-agent
     spec:
       imagePullSecrets:
-      - name: ${acr_secret_name}
+      - name: ${registry_secret_name}
       containers:
       - name: agent
         image: ${agent_image}
@@ -77,9 +76,9 @@ data:
       - name: jnlp
         env:
         - name: JENKINS_URL
-          value: &apos;http://${jenkins_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
+          value: &apos;http://${resource_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
         - name: JENKINS_TUNNEL
-          value: &apos;${jenkins_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
+          value: &apos;${resource_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
         securityContext:
           runAsUser: 1001
           allowPrivilegeEscalation: false
@@ -97,7 +96,7 @@ data:
         projected:
           sources:
           - secret:
-              name: ${acr_secret_name}
+              name: ${registry_secret_name}
               items:
                 - key: .dockerconfigjson
                   path: config.json
@@ -114,7 +113,12 @@ data:
               delete_namespace(app_dev_namespace)
               delete_namespace(app_prod_namespace)
         
-              sh &quot;helm delete --purge cicd || echo&quot;
+              sh &quot;&quot;&quot;
+                for CHART_NAME in \$(helm ls -q --namespace ${infra_namespace})
+                do
+                  helm delete --purge \$CHART_NAME &amp;&gt;/dev/null || echo
+                done
+              &quot;&quot;&quot;
             }
           }
         }
@@ -130,7 +134,7 @@ data:
         stage(&apos;Create Infra namespace&apos;) {
           steps {
             container(&apos;agent&apos;) {
-              create_from_template &apos;default&apos;, &quot;templates/infra-namespace.yaml _${prefix_label}_ $name_prefix&quot;
+              sh &quot;kubectl create ns ${infra_namespace}&quot;
             }
           }
         }
@@ -142,154 +146,111 @@ data:
                 cd templates/helm
                 helm install \
                   --namespace ${infra_namespace} \
-                  --name cicd \
+                  --name nexus \
                   --set fqdn=&apos;nexus.${dns_domain}&apos; \
                   nexus
+              &quot;&quot;&quot;
+              
+              wait_for_deployment_ready(infra_namespace, &apos;nexus&apos;)
+            }
+          }
+        }
+    
+      
+        stage(&apos;Create Sonarqube&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
+    
+              sh &quot;&quot;&quot;
+                cd templates/helm
+                helm install \
+                  --namespace ${infra_namespace} \
+                  --name postgresql-sonarqube \
+                  --set name=postgresql-sonarqube \
+                  --set database.name=&apos;sonar&apos; \
+                  --set auth.user=&apos;sonar&apos; \
+                  --set auth.password=&apos;sonar&apos; \
+                  postgresql
+              &quot;&quot;&quot;
+        
+              // Wait for deployment of sonarqube until postgres is ready to handle requests.
+              wait_for_deployment_ready(infra_namespace, &apos;postgresql-sonarqube&apos;)
+        
+              sh &quot;&quot;&quot;
+                cd templates/helm
+                helm install \
+                  --namespace ${infra_namespace} \
+                  --name sonarqube \
+                  --set fqdn=&apos;sonarqube.${dns_domain}&apos; \
+                  --set database.name=&apos;sonar&apos; \
+                  --set database.user=&apos;sonar&apos; \
+                  --set database.password=&apos;sonar&apos; \
+                  --set database.port=5432 \
+                  --set database.serviceName=&apos;postgresql-sonarqube&apos; \
+                  --set database.namespace=&apos;${infra_namespace}&apos; \
+                  sonarqube
+              &quot;&quot;&quot;
+        
+              wait_for_deployment_ready(infra_namespace, &apos;sonarqube&apos;)
+        
+            }
+          }
+        }
+      
+        stage(&apos;Create DEV namespace&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
+              sh &quot;&quot;&quot;
+                cd templates/helm
+                helm install \
+                  --namespace ${app_dev_namespace}\
+                  --name application-dev \
+                  --set name=&apos;application-dev&apos; \
+                  --set fqdn=&apos;application-dev.${dns_domain}&apos; \
+                  --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
+                  --set jenkins.serviceAccount=&apos;default&apos; \
+                  --set service.name=&apos;tasks&apos; \
+                  --set service.port=8080 \
+                  --set ingress.tls.secretName=&apos;application-dev-tls-secret&apos; \
+                  --set imageCredentials.registry=&apos;${registry_hostname}&apos; \
+                  --set imageCredentials.username=&apos;${registry_username}&apos; \
+                  --set imageCredentials.password=&apos;${registry_password}&apos; \
+                  application-namespace
               &quot;&quot;&quot;
             }
           }
         }
-        
-      /*
-      stage(&apos;Create Nexus&apos;) {
-        create_from_template infra_namespace, &quot;templates/nexus.yaml _${prefix_label}_ $name_prefix&quot;
-        create_from_template infra_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
-          _RESOURCE_NAME_ &quot;${name_prefix}nexus3&quot; \
-          _DNS_NAME_ &quot;nexus.${dns_domain}&quot; \
-          _NAMESPACE_ &quot;${infra_namespace}&quot; \
-          _SERVICE_NAME_ &quot;${name_prefix}nexus3&quot; \
-          _SERVICE_PORT_ 8081
-        &quot;&quot;&quot;
-        wait_for_deployment_ready(infra_namespace, &quot;${name_prefix}nexus3&quot;)
     
-        // Get nexus pod name    
-        def pod_name = get_pod_name(infra_namespace, &quot;${name_prefix}nexus3&quot;)
-        
-        // Wait till nexus service API is available
-        sh &quot;&quot;&quot;
-          kubectl --namespace ${infra_namespace} cp artefacts/initialize_nexus_repos.sh $pod_name:/tmp/
-          #kubectl --namespace ${infra_namespace} cp artefacts/setup_nexus3.sh $pod_name:/tmp/
-          
-          FAILED=0
-          while true
-          do
-            kubectl --namespace ${infra_namespace} exec $pod_name -- /bin/bash \
-              /tmp/initialize_nexus_repos.sh \
-                --connection_check \
-                --url http://localhost:8081 || FAILED=1
+        stage(&apos;Create PROD namespace&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
     
-            [ \$FAILED -eq 0 ] &amp;&amp; break
-            FAILED=0
-            sleep 10
-          done
-        &quot;&quot;&quot;
-        
-        // Nexus API is accessible here.
-        
-        // Get nexus admin password
-        //nexus_admin_password = sh (
-        //  script: &quot;kubectl --namespace ${infra_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password&quot;,
-        //  returnStdout: true
-        //).trim()
-        
-        // Change admin password to standard one. This will maybe change
-        // in future releases, but for now let&apos;s use standard admin pasword
-        // admin123.
-        sh &quot;&quot;&quot;
-          ADMIN_PASSWORD=\$(kubectl --namespace ${infra_namespace} exec $pod_name -- /usr/bin/cat /nexus-data/admin.password)
-          
-          kubectl --namespace ${infra_namespace} exec $pod_name -- /bin/bash \
-            /tmp/initialize_nexus_repos.sh \
-              --user admin \
-              --password \$ADMIN_PASSWORD \
-              --new_admin_password &apos;${nexus_admin_password}&apos; \
-              --url http://localhost:8081 || {
-                  echo &quot;Error! Change of admin password failed!&quot;
-                  exit 1
-                }
-        &quot;&quot;&quot;
-        
-        // Initialize nexus repositories
-        sh &quot;&quot;&quot;
-          kubectl --namespace ${infra_namespace} exec $pod_name -- /bin/bash \
-            /tmp/initialize_nexus_repos.sh \
-              --user admin \
-              --password &apos;${nexus_admin_password}&apos; \
-              --url http://localhost:8081 || {
-                  echo &quot;Error! Initialization of nexus repositories failed!&quot;
-                  exit 1
-                }
-        &quot;&quot;&quot;
-      }
-      
-      stage(&apos;Create Sonarqube&apos;) {
-        create_from_template infra_namespace, &quot;&quot;&quot;templates/postgresql-persistent.yaml \
-          _${prefix_label}_ ${name_prefix}sonar- \
-          _POSTGRES_DB_ sonar \
-          _POSTGRES_USER_ sonar \
-          _POSTGRES_PASSWORD_ sonar \
-          _DATABASE_SERVICE_NAME_ postgresql-sonarqube
-        &quot;&quot;&quot;
-        
-        // Wait for deployment of sonarqube until postgres is ready to handle requests.
-        wait_for_deployment_ready(infra_namespace, &quot;${name_prefix}sonar-postgres&quot;)
-        
-        create_from_template infra_namespace, &quot;&quot;&quot;templates/sonarqube.yaml \
-          _${prefix_label}_ ${name_prefix} \
-          _POSTGRES_DB_ sonar \
-          _POSTGRES_USER_ sonar \
-          _POSTGRES_PASSWORD_ sonar \
-          _DATABASE_SERVICE_NAME_ postgresql-sonarqube \
-          _COMPONENTS_NAMESPACE_ &quot;${infra_namespace}&quot;
-        &quot;&quot;&quot;
-    
-        create_from_template infra_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
-          _RESOURCE_NAME_ &quot;${name_prefix}sonarqube&quot; \
-          _DNS_NAME_ &quot;sonarqube.${dns_domain}&quot; \
-          _NAMESPACE_ &quot;${infra_namespace}&quot; \
-          _SERVICE_NAME_ &quot;${name_prefix}sonarqube&quot; \
-          _SERVICE_PORT_ 9000
-        &quot;&quot;&quot;
-        wait_for_deployment_ready(infra_namespace, &quot;${name_prefix}sonarqube&quot;)
-      }
-      
-      stage(&apos;Create DEV namespace&apos;) {
-        create_from_template &apos;&apos;, &quot;templates/tasks-dev-namespace.yaml _${prefix_label}_ $name_prefix&quot;
-        create_from_template app_dev_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
-          _RESOURCE_NAME_ &quot;${name_prefix}application-dev&quot; \
-          _DNS_NAME_ &quot;application-dev.${dns_domain}&quot; \
-          _NAMESPACE_ &quot;${app_dev_namespace}&quot; \
-          _SERVICE_NAME_ &quot;${name_prefix}tasks&quot; \
-          _SERVICE_PORT_ 8080
-        &quot;&quot;&quot;
-        
-        sh &quot;&quot;&quot;
-          kubectl get secret acr-secret --namespace=${name_prefix}jenkins --export -o yaml |\
-          kubectl apply --namespace=${name_prefix}tasks-dev -f -
-        &quot;&quot;&quot;
-      }
-      
-      stage(&apos;Create PROD namespace&apos;) {
-        create_from_template &apos;&apos;, &quot;templates/tasks-prod-namespace.yaml _${prefix_label}_ $name_prefix&quot;
-        create_from_template app_prod_namespace, &quot;&quot;&quot;templates/ingress/tls-ingress.yaml \
-          _RESOURCE_NAME_ &quot;${name_prefix}application-prod&quot; \
-          _DNS_NAME_ &quot;application-prod.${dns_domain}&quot; \
-          _NAMESPACE_ &quot;${app_prod_namespace}&quot; \
-          _SERVICE_NAME_ &quot;green-tasks&quot; \
-          _SERVICE_PORT_ 8080
-        &quot;&quot;&quot;
-        
-        sh &quot;&quot;&quot;
-          kubectl get secret acr-secret --namespace=${name_prefix}jenkins --export -o yaml |\
-          kubectl apply --namespace=${name_prefix}tasks-prod -f -
-        &quot;&quot;&quot;
-      }
+              sh &quot;&quot;&quot;
+                cd templates/helm
+                helm install \
+                  --namespace ${app_prod_namespace}\
+                  --name application-prod \
+                  --set name=&apos;application-prod&apos; \
+                  --set fqdn=&apos;application-prod.${dns_domain}&apos; \
+                  --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
+                  --set jenkins.serviceAccount=&apos;default&apos; \
+                  --set service.name=&apos;green-tasks&apos; \
+                  --set service.port=8080 \
+                  --set ingress.tls.secretName=&apos;application-prod-tls-secret&apos; \
+                  --set imageCredentials.registry=&apos;${registry_hostname}&apos; \
+                  --set imageCredentials.username=&apos;${registry_username}&apos; \
+                  --set imageCredentials.password=&apos;${registry_password}&apos; \
+                  application-namespace
+              &quot;&quot;&quot;
+            }
+          }
+        }
       
       //stage(&apos;Start Application Pipeline&apos;) {
       //  build job: &quot;cicd-app-pipeline&quot;,
       //      wait: false
       //}
-      */
+      
       }
     }
     
@@ -311,49 +272,13 @@ data:
       ).trim()
     }
     
-    def create_from_template(namespace, request) {
-      sh &quot;&quot;&quot;
-        TMP_DIR=\$(mktemp -d)
-    
-        function create_from_template {
-          FILE=\$1; shift
-    
-          if [ ! -f &quot;\$FILE&quot; ]; then
-            echo &quot;ERROR: File &apos;\$FILE&apos; doesn&apos;t exist!&quot;
-            exit 1
-          fi
-    
-          set -x
-          cp \$FILE &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-    
-          while (( &quot;\$#&quot; )); do
-            #echo &quot;Replacing parameter: \$1 -&gt; \$2&quot;
-            sed -i &apos;s@&apos;\$1&apos;@&apos;\$2&apos;@g&apos; &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-            shift
-            shift
-          done
-    
-          if [ &quot;$namespace&quot; == &quot;&quot; ]; then
-            kubectl create -f &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-          else
-            kubectl --namespace $namespace create -f &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-          fi
-          set +x
-        }
-        
-        create_from_template $request
-    
-        rm -rf \$TMP_DIR
-      &quot;&quot;&quot;
-    }
-    
     def wait_for_deployment_ready(namespace, deployment) {
       sh &quot;&quot;&quot;
         while true;
         do
           READY=\$(kubectl --namespace $namespace get deployment $deployment -o=custom-columns=AVAILABLE:.status.availableReplicas --no-headers)
-          echo \$READY
-          if [ \$READY -ge 1 ]; then
+          if [ \$READY -ge 1 ] 2&gt;/dev/null
+          then
             break
           fi
           

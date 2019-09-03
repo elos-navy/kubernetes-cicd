@@ -7,6 +7,8 @@ name: jenkins
 containerRegistry:
   hostname: docker.io
   secretName: registry-secret
+  username: bob
+  password: bob
 
 application:
   jobName: app-pipeline-job
