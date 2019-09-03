@@ -33,6 +33,7 @@ data:
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
     def prefix               = &apos;-cicd&apos;
+    def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
     def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
     def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
     def maven_image          = &quot;${acr_hostname}/${prefix}jenkins/jenkins-agent-appdev&quot;
@@ -103,9 +104,9 @@ data:
       - name: jnlp
         env:
         - name: JENKINS_URL
-          value: &apos;http://${prefix}jenkins.${prefix}jenkins.svc.cluster.local:8080/&apos;
+          value: &apos;http://${resource_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
         - name: JENKINS_TUNNEL
-          value: &apos;${prefix}jenkins-jnlp.${prefix}jenkins.svc.cluster.local:50000&apos;
+          value: &apos;${resource_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
         securityContext:
           runAsUser: 1001
           allowPrivilegeEscalation: false
