@@ -13,8 +13,13 @@ containerRegistry:
 application:
   jobName: app-pipeline-job
   gitUrl: https://github.com/elos-tech/openshift-cicd-app.git
+  dev:
+    namespace: cicd-application-dev
+  prod:
+    namespace: cicd-application-prod
 
 infra:
+  namespace: cicd-infra
   jobName: infra-pipeline-job
   gitUrl: https://github.com/elos-tech/kubernetes-cicd.git
 

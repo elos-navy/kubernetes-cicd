@@ -37,9 +37,11 @@ data:
     def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
     
     def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
-    def infra_namespace      = &quot;cicd-infra&quot;
-    def app_dev_namespace    = &quot;cicd-application-dev&quot;
-    def app_prod_namespace   = &quot;cicd-application-prod&quot;
+    def infra_namespace      = &quot;{{ .Values.infra.namespace }}&quot;
+    def app_dev_namespace    = &quot;{{ .Values.application.dev.namespace }}&quot;
+    def app_prod_namespace   = &quot;{{ .Values.application.prod.namespace }}&quot;
+
+    def app_pipeline_job     = &quot;{{ .Values.application.jobName }}&quot;
     
     def nexus_admin_password = &apos;admin123&apos;
     
@@ -205,7 +207,7 @@ data:
                 helm install \
                   --namespace ${app_dev_namespace}\
                   --name application-dev \
-                  --set name=&apos;application-dev&apos; \
+                  --set name=&apos;${app_dev_namespace}&apos; \
                   --set fqdn=&apos;application-dev.${dns_domain}&apos; \
                   --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
                   --set jenkins.serviceAccount=&apos;default&apos; \
@@ -230,7 +232,7 @@ data:
                 helm install \
                   --namespace ${app_prod_namespace}\
                   --name application-prod \
-                  --set name=&apos;application-prod&apos; \
+                  --set name=&apos;${app_prod_namespace}&apos; \
                   --set fqdn=&apos;application-prod.${dns_domain}&apos; \
                   --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
                   --set jenkins.serviceAccount=&apos;default&apos; \
@@ -246,11 +248,14 @@ data:
           }
         }
       
-      //stage(&apos;Start Application Pipeline&apos;) {
-      //  build job: &quot;cicd-app-pipeline&quot;,
-      //      wait: false
-      //}
-      
+        stage(&apos;Start Application Pipeline&apos;) {
+          steps {
+            container(&apos;agent&apos;) {
+              build job: &apos;${app_pipeline_job}&apos;,
+                wait: false
+            }
+          }
+        }
       }
     }
     
