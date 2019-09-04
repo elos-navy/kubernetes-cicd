@@ -146,7 +146,9 @@ function install_cert_manager {
     --namespace $CERT_MANAGER_NAMESPACE \
     --version v0.8.0 \
     jetstack/cert-manager
+}
 
+function create_cluster_issuer {
   # CA cluster issuer.
   # Wait till cluster issuer resource can be created.
   for i in $(seq 1 30)

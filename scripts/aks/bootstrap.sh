@@ -140,6 +140,7 @@ helm install \
   --set dnsDomain="$DNS_ZONE_NAME" \
   --set master.adminPassword="$JENKINS_ADMIN_PASSWORD" \
   jenkins
+handle_error "Error while installing jenkins helm chart!"
 cd -
 
 # Build and push jenkins agent container images to ACR registry.
@@ -163,11 +164,16 @@ az acr build \
 # Setup wildcard DNS record for apps. This uses domain provided
 # by HTTP Application Routing AKS addon enabled above.
 wait_for_ingress_controller_public_ip
-azure_setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
+aazure_setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
 
 # Wait for jenkins pod to be ready. So after ARM deployment jenkins
 # should be ready and available.
 #wait_for_deployment_ready "${PREFIX}jenkins" "app=${PREFIX}jenkins"
 wait_for_deployment_ready "$JENKINS_NAMESPACE" "app=$JENKINS_RESOURCE_NAME"
+
+# Cluster issuer can be created some time after cert-manager is installed.
+# Do it as a last step of whole bootstrap, so there is no need to wait for
+# it before.
+create_cluster_issuer
 
 rm -rf $TMP_DIR
