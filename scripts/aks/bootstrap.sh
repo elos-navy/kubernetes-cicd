@@ -93,8 +93,8 @@ echo $DNS_ZONE_NAME > /http_application_routing_zone
 # Jenkins Namespace
 #create_from_template templates/jenkins-namespace.yaml \
 #  _PREFIX_ $PREFIX
-kubectl create ns $JENKINS_RESOURCE_NAME
-kubectl config set-context $(kubectl config current-context) --namespace=$JENKINS_RESOURCE_NAME
+kubectl create ns $JENKINS_NAMESPACE
+kubectl config set-context $(kubectl config current-context) --namespace=$JENKINS_NAMESPACE
 
 # Create secret containing jenkins admin password.
 #SECRET_FILE="$(mktemp -d)/password"
@@ -105,17 +105,17 @@ kubectl config set-context $(kubectl config current-context) --namespace=$JENKIN
 
 # ACR credentials and hostname are used with jenkins/pipeline deployment
 # and later for building jenkins agent container image.
-ACR_CREDENTIALS=$(az acr credential show -n $REGISTRY_NAME)
-ACR_USERNAME=$(echo $ACR_CREDENTIALS | jq '.username' | sed 's/"//g')
-ACR_PASSWORD=$(echo $ACR_CREDENTIALS | jq '.passwords[0].value' | sed 's/"//g')
-ACR_HOSTNAME=$(az acr show -n $REGISTRY_NAME | jq '.loginServer' | sed 's/"//g')
+REGISTRY_CREDENTIALS=$(az acr credential show -n $REGISTRY_NAME)
+REGISTRY_USERNAME=$(echo $REGISTRY_CREDENTIALS | jq '.username' | sed 's/"//g')
+REGISTRY_PASSWORD=$(echo $REGISTRY_CREDENTIALS | jq '.passwords[0].value' | sed 's/"//g')
+REGISTRY_HOSTNAME=$(az acr show -n $REGISTRY_NAME | jq '.loginServer' | sed 's/"//g')
 
 # Create k8s secret for pulling images from ACR registry.
-kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
-    --docker-server=$ACR_HOSTNAME \
-    --docker-username=$ACR_USERNAME \
-    --docker-password=$ACR_PASSWORD \
-    --docker-email='info@elostech.cz'
+#kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
+#    --docker-server=$ACR_HOSTNAME \
+#    --docker-username=$ACR_USERNAME \
+#    --docker-password=$ACR_PASSWORD \
+#    --docker-email='info@elostech.cz'
 
 # Jenkins
 #create_from_template templates/jenkins-persistent.yaml \
@@ -130,10 +130,12 @@ kubectl create secret docker-registry $REGISTRY_SECRET_NAME \
 cd templates/helm
 helm install \
   --name "$JENKINS_RESOURCE_NAME" \
-  --namespace "$JENKINS_RESOURCE_NAME" \
+  --namespace "$JENKINS_NAMESPACE" \
   --set name="$JENKINS_RESOURCE_NAME" \
-  --set containerRegistry.hostname="$ACR_HOSTNAME" \
+  --set containerRegistry.hostname="$REGISTRY_HOSTNAME" \
   --set containerRegistry.secretName="$REGISTRY_SECRET_NAME" \
+  --set containerRegistry.username="$REGISTRY_USERNAME" \
+  --set containerRegistry.password="$REGISTRY_PASSWORD" \
   --set application.gitUrl="$APPLICATION_GIT_URL" \
   --set dnsDomain="$DNS_ZONE_NAME" \
   --set master.adminPassword="$JENKINS_ADMIN_PASSWORD" \
@@ -142,12 +144,12 @@ cd -
 
 # Build and push jenkins agent container images to ACR registry.
 az acr build \
-  -t ${JENKINS_RESOURCE_NAME}/jenkins-agent:latest \
+  -t ${JENKINS_NAMESPACE}/jenkins-agent:latest \
   -r $REGISTRY_NAME \
   artefacts/jenkins-agent/
 
 az acr build \
-  -t ${JENKINS_RESOURCE_NAME}jenkins/jenkins-agent-maven:latest \
+  -t ${JENKINS_NAMESPACE}/jenkins-agent-maven:latest \
   -r $REGISTRY_NAME \
   artefacts/jenkins-agent-maven/
 
@@ -166,6 +168,6 @@ azure_setup_dns_record $DNS_ZONE_NAME '*' "$ROUTER_IP"
 # Wait for jenkins pod to be ready. So after ARM deployment jenkins
 # should be ready and available.
 #wait_for_deployment_ready "${PREFIX}jenkins" "app=${PREFIX}jenkins"
-wait_for_deployment_ready "$JENKINS_RESOURCE_NAME" "app=$JENKINS_RESOURCE_NAME"
+wait_for_deployment_ready "$JENKINS_NAMESPACE" "app=$JENKINS_RESOURCE_NAME"
 
 rm -rf $TMP_DIR
