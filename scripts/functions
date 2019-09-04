@@ -82,7 +82,7 @@ function wait_for_deployment_ready()
   for i in $(seq 1 30)
   do
     COUNT=$(kubectl get deployment --no-headers -o=custom-columns=AVAILABLE:.status.availableReplicas -l $LABEL -n $NAMESPACE)
-    [ $COUNT -gt 0 ] && break
+    [ $COUNT -gt 0 ] 2>/dev/null && break
     sleep 60
   done
 }
