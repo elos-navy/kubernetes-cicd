@@ -34,7 +34,12 @@ data:
         <script>// Pipeline global variables/parameters
 
     def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
-    def jenkins_namespace    = &quot;${{ .Release.Namespace }}&quot;
+
+    def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
+    def infra_namespace      = &quot;{{ .Values.infra.namespace }}&quot;
+    def app_dev_namespace    = &quot;{{ .Values.application.dev.namespace }}&quot;
+    def app_prod_namespace   = &quot;{{ .Values.application.prod.namespace }}&quot;
+
 
     def components_namespace = &quot;${prefix}components&quot;
     def tasks_dev_namespace  = &quot;${prefix}tasks-dev&quot;
