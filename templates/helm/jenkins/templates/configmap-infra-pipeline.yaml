@@ -116,7 +116,7 @@ data:
               delete_namespace(app_prod_namespace)
         
               sh &quot;&quot;&quot;
-                for CHART_NAME in \$(helm ls -q --namespace ${infra_namespace})
+                for CHART_NAME in \$(helm ls -q --namespace ${infra_namespace}) &apos;application-dev&apos; &apos;application-prod&apos;
                 do
                   helm delete --purge \$CHART_NAME &amp;&gt;/dev/null || echo
                 done
@@ -251,7 +251,7 @@ data:
         stage(&apos;Start Application Pipeline&apos;) {
           steps {
             container(&apos;agent&apos;) {
-              build job: &apos;${app_pipeline_job}&apos;,
+              build job: &quot;${app_pipeline_job}&quot;,
                 wait: false
             }
           }
