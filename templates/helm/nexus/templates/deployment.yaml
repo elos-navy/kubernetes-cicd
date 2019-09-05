@@ -53,6 +53,16 @@ spec:
                   --password {{ .Values.newAdminPassword }}
                   --url http://127.0.0.1:8081
                 ;} &> /tmp/init.log"]
+      initContainers:
+      - name: prepare-data-volume
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - chown nexus:nexus /nexus-data; rm -rf /nexus-data/lost+found
+        volumeMounts:
+        - mountPath: /nexus-data
+          name: nexus-data
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
