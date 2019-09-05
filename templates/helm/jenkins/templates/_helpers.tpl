@@ -36,5 +36,5 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{- define "imagePullSecret" }}
-{{- printf "{\"auths\": {\"%s\": {\"auth\": \"%s\"}}}" .Values.containerRegistry.registry (printf "%s:%s" .Values.containerRegistry.username .Values.containerRegistry.password | b64enc) | b64enc }}
+{{- printf "{\"auths\": {\"%s\": {\"auth\": \"%s\"}}}" .Values.containerRegistry.hostname (printf "%s:%s" .Values.containerRegistry.username .Values.containerRegistry.password | b64enc) | b64enc }}
 {{- end }}
