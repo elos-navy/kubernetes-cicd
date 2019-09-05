@@ -29,7 +29,7 @@ spec:
         terminationMessagePolicy: File
         volumeMounts:
         - name: nexus-data
-          mountPath: /nexus-data
+          mountPath: /nexus-data2
         - name: nexus-script
           mountPath: /mnt
         lifecycle:
@@ -59,9 +59,9 @@ spec:
         command:
           - /bin/sh
           - -c
-          - chown nexus:nexus /nexus-data; rm -rf /nexus-data/lost+found
+          - chown -R nexus:nexus /nexus-data2; rm -rf /nexus-data2/lost+found
         volumeMounts:
-        - mountPath: /nexus-data
+        - mountPath: /nexus-data2
           name: nexus-data
       dnsPolicy: ClusterFirst
       restartPolicy: Always
