@@ -39,27 +39,18 @@ data:
     def infra_namespace      = &quot;{{ .Values.infra.namespace }}&quot;
     def app_dev_namespace    = &quot;{{ .Values.application.dev.namespace }}&quot;
     def app_prod_namespace   = &quot;{{ .Values.application.prod.namespace }}&quot;
-
-
-    def components_namespace = &quot;${prefix}components&quot;
-    def tasks_dev_namespace  = &quot;${prefix}tasks-dev&quot;
-    def tasks_prod_namespace = &quot;${prefix}tasks-prod&quot;
  
-    def prefix               = &apos;-cicd&apos;
-    def acr_hostname         = &apos;{{ .Values.containerRegistry.hostname }}&apos;
-    def acr_secret_name      = &apos;{{ .Values.containerRegistry.secretName }}&apos;
-    def maven_image          = &quot;${acr_hostname}/${jenkins_name}/jenkins-agent-appdev&quot;
+    def registry_hostname    = &apos;{{ .Values.containerRegistry.hostname }}&apos;
+    def registry_secret_name = &apos;{{ .Values.containerRegistry.secretName }}&apos;
+
+    def maven_image          = &quot;${registry_hostname}/${jenkins_namespace}/jenkins-agent-maven&quot;
+
     def git_repo_url         = &apos;{{ .Values.application.gitUrl }}&apos;
     
-    // Helper variable for prefix substitution with double sed-ed templates.
-    def prefix_label          = &apos;PREFIX&apos;
-    def acr_secret_name_label = &apos;REGISTRY_SECRET_NAME&apos;
-    def image_label           = &apos;IMAGE&apos;   
-   
-    def sonarqube_url        = &quot;${prefix}sonarqube.${prefix}components.svc.cluster.local&quot;
-    def nexus_url            = &quot;http://admin:admin123@${prefix}nexus3.${prefix}components.svc.cluster.local:8081&quot;
-    def tasks_dev_url        = &quot;http://${prefix}tasks.${tasks_dev_namespace}.svc.cluster.local:8080&quot;
-    //def tasks_prod_url       = &quot;http://${prefix}tasks.${tasks_prod_namespace}.svc.cluster.local:8080&quot;
+    def sonarqube_url        = &quot;sonarqube.${infra_namespace}.svc.cluster.local&quot;
+    def nexus_url            = &quot;http://admin:admin123@nexus.${infra_namespace}.svc.cluster.local:8081&quot;
+    def tasks_dev_url        = &quot;http://application-dev.${app_dev_namespace}.svc.cluster.local:8080&quot;
+    //def tasks_prod_url       = &quot;http://application-prod.${app_prod_namespace}.svc.cluster.local:8080&quot;
     
     def maven_config_file    = &apos;nexus_openshift_settings.xml&apos;
     def mvnCmd               = &quot;mvn -s ./${maven_config_file}&quot;
@@ -68,6 +59,7 @@ data:
     def gb_destination       = &apos;green&apos;
     def gb_active            = &apos;&apos;
     
+
     // Convenience Functions to read variables from the pom.xml
     // Do not change anything below this line.
     def getVersionFromPom(pom) {
@@ -88,17 +80,17 @@ data:
     pipeline {
       agent {
         kubernetes {
-          label &apos;jenkins-maven-agent&apos;
+          label &apos;jenkins-agent-maven&apos;
           cloud &apos;openshift&apos;
           yaml &quot;&quot;&quot;
     apiVersion: v1
     kind: Pod
     metadata:
       labels:
-        pod: jenkins-maven-agent
+        pod: jenkins-agent-maven
     spec:
       imagePullSecrets:
-      - name: ${acr_secret_name}
+      - name: ${registry_secret_name}
       containers:
       - name: maven
         image: ${maven_image}
@@ -131,7 +123,7 @@ data:
         projected:
           sources:
           - secret:
-              name: ${acr_secret_name}
+              name: ${registry_secret_name}
               items:
                 - key: .dockerconfigjson
                   path: config.json
@@ -156,6 +148,7 @@ data:
             container(&apos;maven&apos;) {
               sh &apos;mvn --version&apos;
               sh &apos;skopeo --version&apos;
+              sh &apos;buildah --version&apos;
               sh &apos;kubectl version 2&gt;/dev/null || echo -n&apos;
             }
           }
@@ -185,7 +178,7 @@ data:
                 artifactId = getArtifactIdFromPom(&quot;pom.xml&quot;)
                 version    = getVersionFromPom(&quot;pom.xml&quot;)
                 
-                build_tag    = &quot;${version}-${BUILD_NUMBER}&quot;
+                build_tag  = &quot;${version}-${BUILD_NUMBER}&quot;
               }
               
               // Setup correct URL to nexus service in config XML file.
@@ -212,7 +205,12 @@ data:
           steps {
             container(&apos;maven&apos;) {
               echo &apos;Trying to compile application source code&apos;
-              sh &quot;${mvnCmd} clean package -DskipTests&quot;
+              sh &quot;&quot;&quot;
+                ${mvnCmd} clean package -DskipTests || {
+                  echo \$?
+                  exit 1
+                }
+              &quot;&quot;&quot;
             }
           }
         }
@@ -264,7 +262,7 @@ data:
     
                    /kaniko/executor \
                      --context /workspace \
-                     --destination ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
+                     --destination ${registry_hostname}/${jenkins_namespace}/tasks:${build_tag}
                  &quot;&quot;&quot;
                }
             }
@@ -276,19 +274,40 @@ data:
             container(&apos;maven&apos;) {
               echo &quot;Deploying container image to Development Project&quot;
               
-              sh &quot;kubectl --namespace=${tasks_dev_namespace} delete all,configmap,replicaset --all --ignore-not-found=true&quot;
+              sh &quot;&quot;&quot;
+                helm delete --purge application-dev || echo
+              &quot;&quot;&quot;
               
               sh &quot;&quot;&quot;
-                kubectl --namespace=${tasks_dev_namespace} create configmap ${prefix}tasks-config \
+                cd k8s_templates/helm
+                helm install \
+                  --name tasks \
+                  --namespace &apos;$app_dev_namespace&apos; \
+                  --set name=&apos;tasks&apos; \
+                  --set usersConfigMap \
+                  --set rolesConfigMap \
+                  --set imageCredentials.secretName= \
+                  --set deployments= \
+                  --set image.repository= \
+                  --set image.tag= \
+                  tasks-app
+              &quot;&quot;&quot;
+              
+              /*
+              sh &quot;kubectl --namespace=${app_dev_namespace} delete all,configmap,replicaset --all --ignore-not-found=true&quot;
+              
+              sh &quot;&quot;&quot;
+                kubectl --namespace=${app_dev_namespace} create configmap cicd-tasks-config \
                   --from-file=./configuration/application-users.properties \
                   --from-file=./configuration/application-roles.properties
               &quot;&quot;&quot;
+              */
               
-              create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
-                _${prefix_label}_ ${prefix} \
-                _${acr_secret_name_label}_ ${acr_secret_name} \
-                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
-              &quot;&quot;&quot;)
+              //create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
+            //    _${prefix_label}_ ${prefix} \
+            //    _${acr_secret_name_label}_ ${acr_secret_name} \
+            //    _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
+            //  &quot;&quot;&quot;)
             }
           }
         }
@@ -300,14 +319,14 @@ data:
               //sleep 30
               
               // Wait till pod is ready
-              wait_for_deployment_ready(tasks_dev_namespace, &quot;${prefix}tasks&quot;)
+              wait_for_deployment_ready(app_dev_namespace, &quot;application&quot;)
               
               // Wait and check if service is already available
               sh &quot;&quot;&quot;
                 COUNTER=0
                 while true;
                 do
-                  curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${tasks_dev_url} &amp;&amp; break
+                  curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${app_dev_url} &amp;&amp; break
                   sleep 10
                   let COUNTER=\$COUNTER+1
                   [ \$COUNTER -eq 10 ] &amp;&amp; exit 1
@@ -316,15 +335,15 @@ data:
               
               // Create a new task called &quot;integration_test_1&quot;
               echo &quot;Creating task&quot;
-              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X POST ${tasks_dev_url}/ws/tasks/integration_test_1&quot;
+              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X POST ${app_dev_url}/ws/tasks/integration_test_1&quot;
     
               // Retrieve task with id &quot;1&quot;
               echo &quot;Retrieving tasks&quot;
-              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${tasks_dev_url}/ws/tasks/1&quot;
+              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${app_dev_url}/ws/tasks/1&quot;
     
               // Delete task with id &quot;1&quot;
               echo &quot;Deleting tasks&quot;
-              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X DELETE ${tasks_dev_url}/ws/tasks/1&quot;
+              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X DELETE ${app_dev_url}/ws/tasks/1&quot;
             }
           }
         }
@@ -337,22 +356,22 @@ data:
               script {
                 gb_active = sh(
                   returnStdout: true,
-                  script: &quot;kubectl get ingress ${prefix}application-prod -n ${tasks_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
+                  script: &quot;kubectl get ingress ${prefix}application-prod -n ${app_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
                 ).trim()
     
-                if (gb_active == &apos;green-tasks&apos;) {
+                if (gb_active == &apos;green-app&apos;) {
                   gb_destination = &apos;blue&apos;
                 } else {
                   gb_destination = &apos;green&apos;
                 }
               }
     
-              sh &quot;kubectl --namespace=${tasks_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-tasks&apos; --ignore-not-found=true&quot;
+              sh &quot;kubectl --namespace=${app_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-app&apos; --ignore-not-found=true&quot;
     
               sh &quot;&quot;&quot;
-                kubectl --namespace=${tasks_prod_namespace} delete configmap ${gb_destination}-tasks-config \
+                kubectl --namespace=${app_prod_namespace} delete configmap ${gb_destination}-app-config \
                   --ignore-not-found=true
-                kubectl --namespace=${tasks_prod_namespace} create configmap ${gb_destination}-tasks-config \
+                kubectl --namespace=${app_prod_namespace} create configmap ${gb_destination}-app-config \
                   --from-file=./configuration/application-users.properties \
                   --from-file=./configuration/application-roles.properties
               &quot;&quot;&quot;
