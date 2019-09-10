@@ -207,18 +207,18 @@ data:
               sh &quot;&quot;&quot;
                 cd templates/helm
                 helm install \
-                  --namespace ${app_dev_namespace}\
+                  --namespace &apos;$app_dev_namespace&apos;\
                   --name application-dev \
-                  --set name=&apos;${app_dev_name}&apos; \
+                  --set name=&apos;$app_dev_name&apos; \
                   --set fqdn=&apos;application-dev.${dns_domain}&apos; \
-                  --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
+                  --set jenkins.namespace=&apos;$jenkins_namespace&apos; \
                   --set jenkins.serviceAccount=&apos;default&apos; \
-                  --set service.name=&apos;tasks&apos; \
+                  --set service.name=&apos;$app_dev_name&apos; \
                   --set service.port=8080 \
-                  --set ingress.tls.secretName=&apos;application-dev-tls-secret&apos; \
-                  --set imageCredentials.registry=&apos;${registry_hostname}&apos; \
-                  --set imageCredentials.username=&apos;${registry_username}&apos; \
-                  --set imageCredentials.password=&apos;${registry_password}&apos; \
+                  --set ingress.tls.secretName=&apos;${app_dev_name}-tls-secret&apos; \
+                  --set imageCredentials.registry=&apos;$registry_hostname&apos; \
+                  --set imageCredentials.username=&apos;$registry_username&apos; \
+                  --set imageCredentials.password=&apos;$registry_password&apos; \
                   application-namespace
               &quot;&quot;&quot;
             }
@@ -232,18 +232,18 @@ data:
               sh &quot;&quot;&quot;
                 cd templates/helm
                 helm install \
-                  --namespace ${app_prod_namespace}\
+                  --namespace &apos;$app_prod_namespace&apos;\
                   --name application-prod \
-                  --set name=&apos;${app_prod_name}&apos; \
+                  --set name=&apos;$app_prod_name&apos; \
                   --set fqdn=&apos;application-prod.${dns_domain}&apos; \
-                  --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
+                  --set jenkins.namespace=&apos;$jenkins_namespace&apos; \
                   --set jenkins.serviceAccount=&apos;default&apos; \
-                  --set service.name=&apos;green-tasks&apos; \
+                  --set service.name=&apos;${app_prod_name}-green&apos; \
                   --set service.port=8080 \
                   --set ingress.tls.secretName=&apos;application-prod-tls-secret&apos; \
-                  --set imageCredentials.registry=&apos;${registry_hostname}&apos; \
-                  --set imageCredentials.username=&apos;${registry_username}&apos; \
-                  --set imageCredentials.password=&apos;${registry_password}&apos; \
+                  --set imageCredentials.registry=&apos;$registry_hostname&apos; \
+                  --set imageCredentials.username=&apos;$registry_username&apos; \
+                  --set imageCredentials.password=&apos;$registry_password&apos; \
                   application-namespace
               &quot;&quot;&quot;
             }

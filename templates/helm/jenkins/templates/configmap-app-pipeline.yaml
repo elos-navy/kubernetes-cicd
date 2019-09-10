@@ -184,12 +184,21 @@ data:
                 build_tag  = &quot;${version}-${BUILD_NUMBER}&quot;
               }
               
-              // Setup correct URL to nexus service in config XML file.
-              sh &quot;sed -i &apos;s;&lt;url&gt;http://.*:8081;&lt;url&gt;${nexus_url};&apos; ${maven_config_file}&quot;
-    
-              // Set current nexus admin password in maven config for uploading artefacts
-              // to nexus repos.
-              //sh &quot;sed -i &apos;s@&lt;password&gt;.*&lt;/password&gt;@&lt;password&gt;${nexus_admin_password}&lt;/password&gt;@&apos; ${maven_config_file}&quot;
+              // Parse nexus config file template and create final config file.
+              sh &quot;&quot;&quot;
+                export CONFIG=&quot;
+                  nexus:
+                    url: $nexus_url
+                    adminPassword: admin123
+                &quot;
+                
+                gomplate \
+                  -d &apos;config=env:///CONFIG?type=application/yaml&apos; \
+                  -f artefacts/nexus_settings.xml.tmpl \
+                  -o $maven_config_file
+                
+                cat $maven_config_file
+              &quot;&quot;&quot;
             }
           }
         }
@@ -231,7 +240,12 @@ data:
           steps {
             container(&apos;maven&apos;) {
               echo &apos;Running Sonar scans&apos;
-              sh &quot;${mvnCmd} sonar:sonar -Dsonar.host.url=http://${sonarqube_url}:9000 -Dsonar.projectName=${JOB_BASE_NAME} -Dsonar.projectVersion=${build_tag}&quot;
+              sh &quot;&quot;&quot;
+                ${mvnCmd} sonar:sonar \
+                  -Dsonar.host.url=http://${sonarqube_url}:9000 \
+                  -Dsonar.projectName=${JOB_BASE_NAME} \
+                  -Dsonar.projectVersion=${build_tag}
+              &quot;&quot;&quot;
             }
           }
         }
@@ -240,29 +254,41 @@ data:
           steps {
             container(&apos;maven&apos;) {
               echo &quot;Publish to Nexus&quot;
-              sh &quot;${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::${nexus_url}/repository/releases&quot;
+              sh &quot;&quot;&quot;
+                ${mvnCmd} deploy \
+                  -DskipTests=true \
+                  -DaltDeploymentRepository=nexus::default::${nexus_url}/repository/releases
+              &quot;&quot;&quot;
             }
           }
         }
        
         stage(&apos;Build and Push Docker Image&apos;){
           steps {
+            container(&apos;maven&apos;) {
+              sh &quot;&quot;&quot;
+                mkdir /workspace &amp;&amp; cd /workspace
+                 
+                export CONFIG=&quot;
+                  nexus:
+                    url: $nexus_url
+                  build:
+                    version: $version
+                &quot;
+                gomplate \
+                  -d &apos;config=env:///CONFIG?type=application/yaml&apos; \
+                  -f artefacts/Dockerfile.tmpl \
+                  -o Dockerfile
+                
+                cat Dockerfile
+              &quot;&quot;&quot;
+            }
+            
             container(name: &apos;kaniko&apos;, shell: &apos;/busybox/sh&apos;) {
                withEnv([&apos;PATH+EXTRA=/busybox&apos;]) {
                  sh &quot;&quot;&quot;#!/busybox/sh
                    set -x
-                   mkdir /workspace &amp;&amp; cd /workspace
-                   
-    cat &gt; /workspace/Dockerfile &lt;&lt; EOF
-    FROM jboss/wildfly:latest
-    RUN curl ${nexus_url}/repository/releases/org/jboss/quickstarts/eap/tasks/${version}/tasks-${version}.war \
-          --output /opt/jboss/wildfly/standalone/deployments/tasks-${version}.war
-    RUN mkdir -p /opt/jboss/configuration &amp;&amp; \
-        mv /opt/jboss/wildfly/standalone/configuration/application-*properties /opt/jboss/configuration &amp;&amp; \
-        ln -s /opt/jboss/configuration/application-roles.properties /opt/jboss/wildfly/standalone/configuration/application-roles.properties &amp;&amp; \
-        ln -s /opt/jboss/configuration/application-users.properties /opt/jboss/wildfly/standalone/configuration/application-users.properties
-    EOF
-    
+                   cd /workspace
                    /kaniko/executor \
                      --context /workspace \
                      --destination ${registry_hostname}/${jenkins_namespace}/tasks:${build_tag}
@@ -282,11 +308,11 @@ data:
               &quot;&quot;&quot;
               
               sh &quot;&quot;&quot;
-                cd k8s_templates/helm
+                cd helm
                 helm install \
                   --name tasks-app-dev \
                   --namespace &apos;$app_dev_namespace&apos; \
-                  --set name=&apos;${app_dev_name}&apos; \
+                  --set name=&apos;$app_dev_name&apos; \
                   --set imageCredentials.secretName=&apos;${app_dev_name}-registry-secret&apos; \
                   --set image.repository=&apos;${registry_hostname}/${jenkins_namespace}/tasks&apos; \
                   --set image.tag=&apos;${build_tag}&apos; \
@@ -304,34 +330,24 @@ data:
               // Wait till pod is ready
               wait_for_deployment_ready(app_dev_namespace, app_dev_name)
               
-              // Wait and check if service is available
               sh &quot;&quot;&quot;
-                COUNTER=0
-                while true;
-                do
-                  curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${app_dev_url} &amp;&amp; break
-                  sleep 10
-                  let COUNTER=\$COUNTER+1
-                  [ \$COUNTER -eq 10 ] &amp;&amp; exit 1
-                done
+                export CONFIG=&quot;
+                  application:
+                    url: $app_dev_url
+                &quot;
+                
+                gomplate \
+                  -d &apos;config=env:///CONFIG?type=application/yaml&apos; \
+                  -f artefacts/integration_tests.tmpl \
+                  -o integration_tests.sh
+                
+                chmod +x integration_tests.sh
+                ./integration_tests.sh
               &quot;&quot;&quot;
-              
-              // Create a new task called &quot;integration_test_1&quot;
-              echo &quot;Creating task&quot;
-              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X POST ${app_dev_url}/ws/tasks/integration_test_1&quot;
-    
-              // Retrieve task with id &quot;1&quot;
-              echo &quot;Retrieving tasks&quot;
-              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X GET ${app_dev_url}/ws/tasks/1&quot;
-    
-              // Delete task with id &quot;1&quot;
-              echo &quot;Deleting tasks&quot;
-              sh &quot;curl -i -f -u &apos;tasks:redhat1&apos; -H &apos;Content-Length: 0&apos; -X DELETE ${app_dev_url}/ws/tasks/1&quot;
             }
           }
         }
         
-        /*
         stage(&apos;Deploy Application into PROD&apos;) {
           steps {
             container(&apos;maven&apos;) {
@@ -340,16 +356,37 @@ data:
               script {
                 gb_active = sh(
                   returnStdout: true,
-                  script: &quot;kubectl get ingress ${prefix}application-prod -n ${app_prod_namespace} -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;&quot;
+                  script: &quot;&quot;&quot;
+                    kubectl get ingress $app_prod_name \
+                      -n $app_prod_namespace \
+                      -o jsonpath=&apos;{ .spec.rules[0].http.paths[0].backend.serviceName }&apos;
+                  &quot;&quot;&quot;
                 ).trim()
     
-                if (gb_active == &apos;green-app&apos;) {
+                if (gb_active == &quot;${app_prod_name}-green&quot;) {
                   gb_destination = &apos;blue&apos;
                 } else {
                   gb_destination = &apos;green&apos;
                 }
               }
     
+              sh &quot;&quot;&quot;
+                helm delete --purge tasks-app-prod-${gb_destination} || echo
+              &quot;&quot;&quot;
+              
+              sh &quot;&quot;&quot;
+                cd helm
+                helm install \
+                  --name tasks-app-prod-${gb_destination} \
+                  --namespace &apos;$app_prod_namespace&apos; \
+                  --set name=&apos;${app_prod_name}-${gb_destination}&apos; \
+                  --set imageCredentials.secretName=&apos;${app_prod_name}-registry-secret&apos; \
+                  --set image.repository=&apos;${registry_hostname}/${jenkins_namespace}/tasks&apos; \
+                  --set image.tag=&apos;${build_tag}&apos; \
+                  tasks-app
+              &quot;&quot;&quot;
+    
+              /*
               sh &quot;kubectl --namespace=${app_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-app&apos; --ignore-not-found=true&quot;
     
               sh &quot;&quot;&quot;
@@ -365,6 +402,7 @@ data:
                 _${acr_secret_name_label}_ ${acr_secret_name} \
                 _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
               &quot;&quot;&quot;)
+              */
             }
           }
         }
@@ -375,15 +413,14 @@ data:
               input &quot;Switch Production?&quot;
     
               sh &quot;&quot;&quot;
-                kubectl patch ingress ${prefix}application-prod \
-                  -n ${tasks_prod_namespace} \
+                kubectl patch ingress $app_prod_name \
+                  -n $app_prod_namespace \
                   --type=json \
-                  -p=&apos;[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/rules/0/http/paths/0/backend/serviceName&quot;, &quot;value&quot;:&quot;${gb_destination}-tasks&quot;}]&apos;
+                  -p=&apos;[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/rules/0/http/paths/0/backend/serviceName&quot;, &quot;value&quot;:&quot;${gb_destination}-${app_prod_name}&quot;}]&apos;
               &quot;&quot;&quot;
             }
           }
         }
-        */
       }
     }
     
@@ -435,8 +472,8 @@ data:
         while true;
         do
           READY=\$(kubectl --namespace $namespace get deployment $deployment -o=custom-columns=AVAILABLE:.status.availableReplicas --no-headers)
-          echo \$READY
-          if [ \$READY -ge 1 ]; then
+          if [ \$READY -ge 1 ] 2&gt;/dev/null
+          then
             break
           fi
           
