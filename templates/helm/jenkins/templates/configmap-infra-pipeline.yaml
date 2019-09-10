@@ -32,7 +32,7 @@ data:
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>
-    def source_git_repo      = &apos;{{ .Values.infra.gitUrl }}&apos;
+    def source_git_repo      = &apos;{{ .Values.infra.git.url }}&apos;
     def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
 
     def jenkins_name         = &apos;{{ include "jenkins.fullname" . }}&apos;

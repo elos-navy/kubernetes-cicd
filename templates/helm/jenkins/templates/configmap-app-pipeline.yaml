@@ -47,7 +47,8 @@ data:
 
     def maven_image          = &quot;${registry_hostname}/${jenkins_namespace}/jenkins-agent-maven&quot;
 
-    def git_repo_url         = &apos;{{ .Values.application.gitUrl }}&apos;
+    def app_git_repo         = &apos;{{ .Values.application.git.url }}&apos;
+    def app_git_branch       = &apos;{{ .Values.application.git.branch }}&apos;
     
     def sonarqube_url        = &quot;sonarqube.${infra_namespace}.svc.cluster.local&quot;
     def nexus_url            = &quot;http://admin:admin123@nexus.${infra_namespace}.svc.cluster.local:8081&quot;
@@ -162,11 +163,11 @@ data:
               // Checkout code from SCM
               checkout([
                 $class: &apos;GitSCM&apos;,
-                branches: [[name: &apos;*/master&apos;]],
+                branches: [[name: &quot;*/${app_git_branch}&quot;]],
                 doGenerateSubmoduleConfigurations: false,
                 extensions: [],
                 submoduleCfg: [],
-                userRemoteConfigs: [[url: git_repo_url]]])
+                userRemoteConfigs: [[url: app_git_repo]]])
             }
           }
         }

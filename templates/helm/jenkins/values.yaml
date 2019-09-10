@@ -12,7 +12,9 @@ containerRegistry:
 
 application:
   jobName: app-pipeline-job
-  gitUrl: https://github.com/elos-tech/openshift-cicd-app.git
+  git:
+    url: https://github.com/elos-tech/openshift-cicd-app.git
+    branch: master
   dev:
     namespace: cicd-application-dev
     resourceName: application-dev
@@ -23,7 +25,8 @@ application:
 infra:
   namespace: cicd-infra
   jobName: infra-pipeline-job
-  gitUrl: https://github.com/elos-tech/kubernetes-cicd.git
+  git:
+    url: https://github.com/elos-tech/kubernetes-cicd.git
 
 dnsDomain: example.com
 hostname: jenkins

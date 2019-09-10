@@ -122,7 +122,8 @@ helm install \
   --set containerRegistry.secretName="$REGISTRY_SECRET_NAME" \
   --set containerRegistry.username="$REGISTRY_USERNAME" \
   --set containerRegistry.password="$REGISTRY_PASSWORD" \
-  --set application.gitUrl="$APPLICATION_GIT_URL" \
+  --set application.git.url="$APPLICATION_GIT_URL" \
+  --set application.git.branch="$GIT_BRANCH" \
   --set dnsDomain="$DNS_ZONE_NAME" \
   --set master.adminPassword="$JENKINS_ADMIN_PASSWORD" \
   jenkins
