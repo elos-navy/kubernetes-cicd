@@ -6,6 +6,8 @@ if [ ! -d 'azure' ]; then
   exit 1
 fi
 
+set -x
+
 TMPDIR=$(mktemp -d)
 ZIPFILE='/tmp/cicd-app-marketplace.zip'
 
@@ -15,9 +17,11 @@ cp -r azure/nested ${TMPDIR}/
 
 cd ${TMPDIR}
 zip -r -D ${ZIPFILE} .
-cd
+cd -
 
 rm -rf ${TMPDIR}
+
+set +x
 
 echo
 echo "Created ZIP file: ${ZIPFILE}"

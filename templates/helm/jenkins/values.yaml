@@ -15,8 +15,10 @@ application:
   gitUrl: https://github.com/elos-tech/openshift-cicd-app.git
   dev:
     namespace: cicd-application-dev
+    resourceName: application-dev
   prod:
     namespace: cicd-application-prod
+    resourceName: application-prod
 
 infra:
   namespace: cicd-infra

@@ -33,7 +33,10 @@ data:
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>// Pipeline global variables/parameters
 
-    def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
+    // Kubernetes resource names. Provided as parameters to helm chart installation.
+    def jenkins_name         = &apos;{{ include "jenkins.fullname" . }}&apos;
+    def app_dev_name         = &apos;{{ .Values.application.dev.resourceName }}&apos;
+    def app_prod_name        = &apos;{{ .Values.application.prod.resourceName }}&apos;
 
     def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
     def infra_namespace      = &quot;{{ .Values.infra.namespace }}&quot;
@@ -103,9 +106,9 @@ data:
       - name: jnlp
         env:
         - name: JENKINS_URL
-          value: &apos;http://${resource_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
+          value: &apos;http://${jenkins_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
         - name: JENKINS_TUNNEL
-          value: &apos;${resource_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
+          value: &apos;${jenkins_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
         securityContext:
           runAsUser: 1001
           allowPrivilegeEscalation: false
@@ -275,21 +278,18 @@ data:
               echo &quot;Deploying container image to Development Project&quot;
               
               sh &quot;&quot;&quot;
-                helm delete --purge application-dev || echo
+                helm delete --purge tasks-app-dev || echo
               &quot;&quot;&quot;
               
               sh &quot;&quot;&quot;
                 cd k8s_templates/helm
                 helm install \
-                  --name tasks \
+                  --name tasks-app-dev \
                   --namespace &apos;$app_dev_namespace&apos; \
                   --set name=&apos;tasks&apos; \
-                  --set usersConfigMap \
-                  --set rolesConfigMap \
-                  --set imageCredentials.secretName= \
-                  --set deployments= \
-                  --set image.repository= \
-                  --set image.tag= \
+                  --set imageCredentials.secretName=&apos;${app_dev_name}-registry-secret&apos; \
+                  --set image.repository=&apos;${registry_hostname}/${jenkins_namespace}/tasks&apos; \
+                  --set image.tag=&apos;${build_tag}&apos; \
                   tasks-app
               &quot;&quot;&quot;
               
@@ -312,6 +312,7 @@ data:
           }
         }
         
+        /*
         stage(&apos;Perform Integration Tests&apos;) {
           steps {
             container(&apos;maven&apos;) {
@@ -399,6 +400,7 @@ data:
             }
           }
         }
+        */
       }
     }
     

@@ -33,8 +33,11 @@ data:
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
         <script>
     def source_git_repo      = &apos;{{ .Values.infra.gitUrl }}&apos;
-    def resource_name        = &apos;{{ include "jenkins.fullname" . }}&apos;
     def dns_domain           = &apos;{{ .Values.dnsDomain }}&apos;
+
+    def jenkins_name         = &apos;{{ include "jenkins.fullname" . }}&apos;
+    def app_dev_name         = &apos;{{ .Values.application.dev.resourceName }}&apos;
+    def app_prod_name        = &apos;{{ .Values.application.prod.resourceName }}&apos;
     
     def jenkins_namespace    = &quot;{{ .Release.Namespace }}&quot;
     def infra_namespace      = &quot;{{ .Values.infra.namespace }}&quot;
@@ -78,9 +81,9 @@ data:
       - name: jnlp
         env:
         - name: JENKINS_URL
-          value: &apos;http://${resource_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
+          value: &apos;http://${jenkins_name}.${jenkins_namespace}.svc.cluster.local:8080/&apos;
         - name: JENKINS_TUNNEL
-          value: &apos;${resource_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
+          value: &apos;${jenkins_name}-jnlp.${jenkins_namespace}.svc.cluster.local:50000&apos;
         securityContext:
           runAsUser: 1001
           allowPrivilegeEscalation: false
