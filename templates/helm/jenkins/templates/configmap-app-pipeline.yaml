@@ -31,8 +31,7 @@ data:
         <org.jenkinsci.plugins.workflow.job.properties.DisableResumeJobProperty/>
       </properties>
       <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.61.1">
-        <script>// Pipeline global variables/parameters
-
+        <script>
     // Kubernetes resource names. Provided as parameters to helm chart installation.
     def jenkins_name         = &apos;{{ include "jenkins.fullname" . }}&apos;
     def app_dev_name         = &apos;{{ .Values.application.dev.resourceName }}&apos;
@@ -79,7 +78,7 @@ data:
       def matcher = readFile(pom) =~ &apos;&lt;artifactId&gt;(.+)&lt;/artifactId&gt;&apos;
       matcher ? matcher[0][1] : null
     }
-    
+
     pipeline {
       agent {
         kubernetes {
@@ -286,43 +285,25 @@ data:
                 helm install \
                   --name tasks-app-dev \
                   --namespace &apos;$app_dev_namespace&apos; \
-                  --set name=&apos;tasks&apos; \
+                  --set name=&apos;${app_dev_name}&apos; \
                   --set imageCredentials.secretName=&apos;${app_dev_name}-registry-secret&apos; \
                   --set image.repository=&apos;${registry_hostname}/${jenkins_namespace}/tasks&apos; \
                   --set image.tag=&apos;${build_tag}&apos; \
                   tasks-app
               &quot;&quot;&quot;
-              
-              /*
-              sh &quot;kubectl --namespace=${app_dev_namespace} delete all,configmap,replicaset --all --ignore-not-found=true&quot;
-              
-              sh &quot;&quot;&quot;
-                kubectl --namespace=${app_dev_namespace} create configmap cicd-tasks-config \
-                  --from-file=./configuration/application-users.properties \
-                  --from-file=./configuration/application-roles.properties
-              &quot;&quot;&quot;
-              */
-              
-              //create_from_template(tasks_dev_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
-            //    _${prefix_label}_ ${prefix} \
-            //    _${acr_secret_name_label}_ ${acr_secret_name} \
-            //    _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
-            //  &quot;&quot;&quot;)
             }
           }
         }
         
-        /*
         stage(&apos;Perform Integration Tests&apos;) {
           steps {
             container(&apos;maven&apos;) {
               echo &quot;Running Integration Tests&quot;
-              //sleep 30
-              
+    
               // Wait till pod is ready
-              wait_for_deployment_ready(app_dev_namespace, &quot;application&quot;)
+              wait_for_deployment_ready(app_dev_namespace, app_dev_name)
               
-              // Wait and check if service is already available
+              // Wait and check if service is available
               sh &quot;&quot;&quot;
                 COUNTER=0
                 while true;
@@ -349,6 +330,7 @@ data:
           }
         }
         
+        /*
         stage(&apos;Deploy Application into PROD&apos;) {
           steps {
             container(&apos;maven&apos;) {

@@ -53,8 +53,7 @@ data:
     def registry_password    = &apos;{{ .Values.containerRegistry.password }}&apos;
     def registry_secret_name = &apos;{{ .Values.containerRegistry.secretName }}&apos;
     def agent_image          = &quot;${registry_hostname}/${jenkins_namespace}/jenkins-agent&quot;
-    
-    
+
     pipeline {
       agent {
         kubernetes {
@@ -210,7 +209,7 @@ data:
                 helm install \
                   --namespace ${app_dev_namespace}\
                   --name application-dev \
-                  --set name=&apos;${app_dev_namespace}&apos; \
+                  --set name=&apos;${app_dev_name}&apos; \
                   --set fqdn=&apos;application-dev.${dns_domain}&apos; \
                   --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
                   --set jenkins.serviceAccount=&apos;default&apos; \
@@ -235,7 +234,7 @@ data:
                 helm install \
                   --namespace ${app_prod_namespace}\
                   --name application-prod \
-                  --set name=&apos;${app_prod_namespace}&apos; \
+                  --set name=&apos;${app_prod_name}&apos; \
                   --set fqdn=&apos;application-prod.${dns_domain}&apos; \
                   --set jenkins.namespace=&apos;${jenkins_namespace}&apos; \
                   --set jenkins.serviceAccount=&apos;default&apos; \
