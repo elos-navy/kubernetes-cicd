@@ -52,8 +52,7 @@ data:
     
     def sonarqube_url        = &quot;sonarqube.${infra_namespace}.svc.cluster.local&quot;
     def nexus_url            = &quot;http://admin:admin123@nexus.${infra_namespace}.svc.cluster.local:8081&quot;
-    def tasks_dev_url        = &quot;http://application-dev.${app_dev_namespace}.svc.cluster.local:8080&quot;
-    //def tasks_prod_url       = &quot;http://application-prod.${app_prod_namespace}.svc.cluster.local:8080&quot;
+    def app_dev_url          = &quot;http://application-dev.${app_dev_namespace}.svc.cluster.local:8080&quot;
     
     def maven_config_file    = &apos;nexus_openshift_settings.xml&apos;
     def mvnCmd               = &quot;mvn -s ./${maven_config_file}&quot;
@@ -385,24 +384,6 @@ data:
                   --set image.tag=&apos;${build_tag}&apos; \
                   tasks-app
               &quot;&quot;&quot;
-    
-              /*
-              sh &quot;kubectl --namespace=${app_prod_namespace} delete all,replicaset -l &apos;app=${gb_destination}-app&apos; --ignore-not-found=true&quot;
-    
-              sh &quot;&quot;&quot;
-                kubectl --namespace=${app_prod_namespace} delete configmap ${gb_destination}-app-config \
-                  --ignore-not-found=true
-                kubectl --namespace=${app_prod_namespace} create configmap ${gb_destination}-app-config \
-                  --from-file=./configuration/application-users.properties \
-                  --from-file=./configuration/application-roles.properties
-              &quot;&quot;&quot;
-    
-              create_from_template(tasks_prod_namespace, &quot;&quot;&quot;k8s_templates/tasks-app.yaml \
-                _${prefix_label}_ &quot;${gb_destination}-&quot; \
-                _${acr_secret_name_label}_ ${acr_secret_name} \
-                _${image_label}_ ${acr_hostname}/${prefix}jenkins/tasks:${build_tag}
-              &quot;&quot;&quot;)
-              */
             }
           }
         }
@@ -416,57 +397,14 @@ data:
                 kubectl patch ingress $app_prod_name \
                   -n $app_prod_namespace \
                   --type=json \
-                  -p=&apos;[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/rules/0/http/paths/0/backend/serviceName&quot;, &quot;value&quot;:&quot;${gb_destination}-${app_prod_name}&quot;}]&apos;
+                  -p=&apos;[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/rules/0/http/paths/0/backend/serviceName&quot;, &quot;value&quot;:&quot;${app_prod_name}-${gb_destination}&quot;}]&apos;
               &quot;&quot;&quot;
             }
           }
         }
       }
     }
-    
-    def get_pod_name(namespace, app_name) {
-      return sh (
-        script: &quot;kubectl --namespace $namespace get pod | grep &apos;^$app_name&apos; | awk &apos;{ print \$1 }&apos;&quot;,
-        returnStdout: true
-      ).trim()
-    }
-    
-    def create_from_template(namespace, request) {
-      sh &quot;&quot;&quot;
-        TMP_DIR=\$(mktemp -d)
-    
-        function create_from_template {
-          FILE=\$1; shift
-    
-          if [ ! -f &quot;\$FILE&quot; ]; then
-            echo &quot;ERROR: File &apos;\$FILE&apos; doesn&apos;t exist!&quot;
-            exit 1
-          fi
-    
-          set -x
-          cp \$FILE &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-    
-          while (( &quot;\$#&quot; )); do
-            #echo &quot;Replacing parameter: \$1 -&gt; \$2&quot;
-            sed -i &apos;s@&apos;\$1&apos;@&apos;\$2&apos;@g&apos; &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-            shift
-            shift
-          done
-    
-          if [ &quot;$namespace&quot; == &quot;&quot; ]; then
-            kubectl create -f &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-          else
-            kubectl --namespace $namespace create -f &quot;\${TMP_DIR}/\$(basename \$FILE)&quot;
-          fi
-          set +x
-        }
-        
-        create_from_template $request
-    
-        rm -rf \$TMP_DIR
-      &quot;&quot;&quot;
-    }
-    
+       
     def wait_for_deployment_ready(namespace, deployment) {
       sh &quot;&quot;&quot;
         while true;
