@@ -228,4 +228,3 @@ function azure_create_storage_account {
     --name $STORAGE_ACCOUNT_NAME \
     --location $LOCATION
 }
-
