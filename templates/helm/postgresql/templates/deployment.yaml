@@ -17,7 +17,7 @@ spec:
           livenessProbe:
             failureThreshold: 1
             exec:
-              command: ["psql", "-w", "-d", "sonar", "-U", "sonar", "-c", "SELECT 1"
+              command: ["psql", "-w", "-d", "sonar", "-U", "sonar", "-c", "SELECT 1"]
             initialDelaySeconds: 50
             periodSeconds: 2
             successThreshold: 1
@@ -25,7 +25,7 @@ spec:
           readinessProbe:
             failureThreshold: 4
             exec:
-              command: ["psql", "-w", "-d", "sonar", "-U", "sonar", "-c", "SELECT 1"
+              command: ["psql", "-w", "-d", "sonar", "-U", "sonar", "-c", "SELECT 1"]
             initialDelaySeconds: 15
             periodSeconds: 1
             successThreshold: 1
