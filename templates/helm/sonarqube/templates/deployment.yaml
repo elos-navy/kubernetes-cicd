@@ -26,7 +26,34 @@ spec:
       - image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: {{ .Chart.Name }}
-        resources: {}
+        livenessProbe:
+          failureThreshold: 4
+          httpGet:
+            path: /
+            port: {{ .Values.service.port }}
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 4
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: sonarqube
+        readinessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /
+            port: {{ .Values.service.port }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 2
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 150m
+            memory: 1900Mi
+          requests:
+            cpu: 150m
+            memory: 1900Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         envFrom:
