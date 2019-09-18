@@ -14,8 +14,31 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          livenessProbe:
+            failureThreshold: 1
+            exec:
+              command: ["psql", "-w", "-d", "sonar", "-U", "sonar", "-c", "SELECT 1"
+            initialDelaySeconds: 50
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 3
+          readinessProbe:
+            failureThreshold: 4
+            exec:
+              command: ["psql", "-w", "-d", "sonar", "-U", "sonar", "-c", "SELECT 1"
+            initialDelaySeconds: 15
+            periodSeconds: 1
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
           ports:
-            - containerPort: 5432
+            - containerPort: {{ .Values.service.port }}
           envFrom:
             - configMapRef:
                 name: {{ include "postgresql.fullname" . }}-config
