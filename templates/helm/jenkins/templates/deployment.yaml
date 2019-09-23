@@ -18,16 +18,34 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
-        - containerPort: 8080
+        - containerPort: {{ .Values.service.port }}
         - containerPort: 50000
+        livenessProbe:
+          httpGet:
+            path: /login
+            port: {{ .Values.service.port }}
+            scheme: HTTP
+          initialDelaySeconds: 660
+          periodSeconds: 4
+          successThreshold: 1
+          failureThreshold: 4
+          timeoutSeconds: 12
         readinessProbe:
           httpGet:
             path: /login
-            port: 8080
-          periodSeconds: 10
-          timeoutSeconds: 5
+            port: {{ .Values.service.port }}
+            scheme: HTTP
+          periodSeconds: 11
           successThreshold: 2
           failureThreshold: 5
+          timeoutSeconds: 12
+        resources:
+          limits:
+            cpu: 300m
+            memory: 800Mi
+          requests:
+            cpu: 300m
+            memory: 800Mi
         env:
         - name: JAVA_OPTS
           value: "-Djenkins.install.runSetupWizard=false"
@@ -42,7 +60,7 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "for i in $(seq 1 20); do if [ -f /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber ]; then NEXT_BUILD_NUMBER=$(cat /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber); else NEXT_BUILD_NUMBER=1; fi; if [ $NEXT_BUILD_NUMBER -ge 2 ]; then break; fi; if curl -f localhost:8080/login &> /dev/null ; then curl -X POST localhost:8080/job/{{ .Values.infra.jobName }}/build --user admin:${JENKINS_PASSWORD}; break; else sleep 10; fi; done"]
+              command: ["/bin/sh", "-c", "for i in $(seq 1 20); do if [ -f /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber ]; then NEXT_BUILD_NUMBER=$(cat /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber); else NEXT_BUILD_NUMBER=1; fi; if [ $NEXT_BUILD_NUMBER -ge 2 ]; then break; fi; if curl -f localhost:{{ .Values.service.port }}/login &> /dev/null ; then curl -X POST localhost:{{ .Values.service.port }}/job/{{ .Values.infra.jobName }}/build --user admin:${JENKINS_PASSWORD}; break; else sleep 10; fi; done"]
       initContainers:
       - name: setup-permissions
         image: alpine:latest
