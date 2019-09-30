@@ -63,7 +63,6 @@ spec:
           periodSeconds: 4
           successThreshold: 1
           timeoutSeconds: 5
-        name: nexus
         readinessProbe:
           failureThreshold: 2
           httpGet:
