@@ -65,10 +65,14 @@
             }
         ],
         "steps": [
-
             {
                 "name": "AuxVM",
                 "label": "Auxiliary VM",
+                "bladeTitle": "Auxiliary VM setup",
+                "subLabel": {
+                  "preValidation": "Add helper VM (AuxVM) deployment size and public SSH key.",
+                  "postValidation": "AuxVM set."
+                },
                 "elements": [
                     {
                         "name": "sshPublicKey",
@@ -106,6 +110,11 @@
             {
                 "name": "K8sClusterConfig",
                 "label": "Kubernetes Cluster",
+                "bladeTitle": "Kubernetes Cluster setup",
+                "subLabel": {
+                  "preValidation": "Setup a cluster to power the whole CICD framework.",
+                  "postValidation": "Cluster configuration set."
+                },
                 "elements": [
                     {
                         "name": "kubernetesVersion",
@@ -142,6 +151,11 @@
             {
                 "name": "Jenkins",
                 "label": "Jenkins",
+                "bladeTitle": "Jenkins automation server initial access",
+                "subLabel": {
+                  "preValidation": "Set a password for the Jenkins sitting at heart of the framework.",
+                  "postValidation": "Jenkins password set."
+                },
                 "elements": [
                     {
                         "name": "jenkinsAdminPassword",
@@ -166,6 +180,11 @@
             {
                 "name": "Application",
                 "label": "Application",
+                "bladeTitle": "Sample app to build?",
+                "subLabel": {
+                  "preValidation": "Application GIT repository URL",
+                  "postValidation": "GIT repository set"
+                },
                 "elements": [
                     {
                         "name": "applicationGitUrl",

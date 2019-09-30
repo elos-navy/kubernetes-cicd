@@ -1,11 +1,10 @@
-#!/bin/bash
+#!/bin/bash -x
 
 CLUSTER_NAME='ls-auth-testing'
-RG_NAME=$CLUSTER_NAME
+RESOURCE_GROUP=$CLUSTER_NAME
 CLUSTER_LOCATION='westeurope'
 
 function create_server_registration {
-  set -x
  
   # Create the Azure AD application
   SERVER_APP_ID=$(az ad app create \
@@ -43,8 +42,6 @@ function create_server_registration {
   
   az ad app permission admin-consent \
     --id $SERVER_APP_ID
-
-  set +x
 }
 
 function create_client_registration {
@@ -73,13 +70,13 @@ function create_client_registration {
 
 function create_cluster {
   az group create \
-    --name $RG_NAME \
+    --name $RESOURCE_GROUP \
     --location $CLUSTER_LOCATION
 
   TENANT_ID=$(az account show --query tenantId -o tsv)
 
   az aks create \
-    --resource-group $RG_NAME \
+    --resource-group $RESOURCE_GROUP \
     --name $CLUSTER_NAME \
     --node-count 1 \
     --generate-ssh-keys \
@@ -88,24 +85,49 @@ function create_cluster {
     --aad-client-app-id $CLIENT_APP_ID \
     --aad-tenant-id $TENANT_ID
 
-  az aks get-credentials \
-    --resource-group $RG_NAME \
+  az aks get-credentials --yes \
+    --resource-group $RESOURCE_GROUP \
     --name $CLUSTER_NAME \
     --admin
+}
+
+function create_role_binding {
+  USER_PRINCIPAL_NAME=$(az ad signed-in-user show --query userPrincipalName -o tsv)
+  cat > /tmp/basic-azure-ad-binding.yaml << EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: contoso-cluster-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: $USER_PRINCIPAL_NAME
+EOF
+  kubectl apply -f /tmp/basic-azure-ad-binding.yaml
 }
 
 function cleanup {
   az ad app delete --id "https://${CLUSTER_NAME}-server"
   az ad app delete --id "https://${CLUSTER_NAME}-client"
 
-  az aks delete \
+  az aks delete --yes \
     --resource-group $RESOURCE_GROUP \
     --name $CLUSTER_NAME
 }
 
 
-# create_server_registration
-# create_client_registration
-# create_cluster
+#create_server_registration
+#create_client_registration
+#create_cluster
+#create_role_binding
 
-# cleanup
+#az aks get-credentials --yes \
+#  --resource-group $RESOURCE_GROUP \
+#  --name $CLUSTER_NAME \
+#  --overwrite-existing
+
+cleanup
