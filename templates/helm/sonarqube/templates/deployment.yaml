@@ -30,7 +30,7 @@ spec:
           failureThreshold: 4
           httpGet:
             path: /
-            port: {{ .Values.service.port }}
+            port: {{ .Values.service.targetPort }}
             scheme: HTTP
           initialDelaySeconds: 300
           periodSeconds: 4
@@ -40,7 +40,7 @@ spec:
           failureThreshold: 2
           httpGet:
             path: /
-            port: {{ .Values.service.port }}
+            port: {{ .Values.service.targetPort }}
             scheme: HTTP
           initialDelaySeconds: 10
           periodSeconds: 10

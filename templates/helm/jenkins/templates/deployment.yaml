@@ -18,12 +18,12 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
-        - containerPort: {{ .Values.service.port }}
+        - containerPort: {{ .Values.service.targetPort }}
         - containerPort: 50000
         livenessProbe:
           httpGet:
             path: /login
-            port: {{ .Values.service.port }}
+            port: {{ .Values.service.targetPort }}
             scheme: HTTP
           initialDelaySeconds: 660
           periodSeconds: 4
@@ -33,7 +33,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /login
-            port: {{ .Values.service.port }}
+            port: {{ .Values.service.targetPort }}
             scheme: HTTP
           periodSeconds: 11
           successThreshold: 2
@@ -60,7 +60,7 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "for i in $(seq 1 20); do if [ -f /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber ]; then NEXT_BUILD_NUMBER=$(cat /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber); else NEXT_BUILD_NUMBER=1; fi; if [ $NEXT_BUILD_NUMBER -ge 2 ]; then break; fi; if curl -f localhost:{{ .Values.service.port }}/login &> /dev/null ; then curl -X POST localhost:{{ .Values.service.port }}/job/{{ .Values.infra.jobName }}/build --user admin:${JENKINS_PASSWORD}; break; else sleep 10; fi; done"]
+              command: ["/bin/sh", "-c", "for i in $(seq 1 20); do if [ -f /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber ]; then NEXT_BUILD_NUMBER=$(cat /var/lib/jenkins/jobs/{{ .Values.infra.jobName }}/nextBuildNumber); else NEXT_BUILD_NUMBER=1; fi; if [ $NEXT_BUILD_NUMBER -ge 2 ]; then break; fi; if curl -f localhost:{{ .Values.service.targetPort }}/login &> /dev/null ; then curl -X POST localhost:{{ .Values.service.targetPort }}/job/{{ .Values.infra.jobName }}/build --user admin:${JENKINS_PASSWORD}; break; else sleep 10; fi; done"]
       initContainers:
       - name: setup-permissions
         image: alpine:latest
