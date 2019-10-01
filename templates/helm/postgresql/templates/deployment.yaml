@@ -38,7 +38,7 @@ spec:
               cpu: 100m
               memory: 200Mi
           ports:
-            - containerPort: {{ .Values.service.port }}
+            - containerPort: {{ .Values.service.targetPort }}
           envFrom:
             - configMapRef:
                 name: {{ include "postgresql.fullname" . }}-config
