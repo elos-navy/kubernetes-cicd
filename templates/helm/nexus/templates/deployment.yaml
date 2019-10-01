@@ -39,7 +39,7 @@ spec:
                 while true; do
                   /mnt/initialize_nexus_repos.sh
                     --connection_check
-                    --url http://127.0.0.1:8081 && break;
+                    --url http://127.0.0.1:{{ .Values.service.targetPort }} && break;
                   sleep 10;
                 done &&
                 ADMIN_PASSWORD=$(/usr/bin/cat /nexus-data/admin.password) &&
@@ -47,12 +47,39 @@ spec:
                   --user admin
                   --password $ADMIN_PASSWORD
                   --new_admin_password {{ .Values.newAdminPassword }}
-                  --url http://127.0.0.1:8081 &&
+                  --url http://127.0.0.1:{{ .Values.service.targetPort }} &&
                 /mnt/initialize_nexus_repos.sh
                   --user admin
                   --password {{ .Values.newAdminPassword }}
-                  --url http://127.0.0.1:8081
+                  --url http://127.0.0.1:{{ .Values.service.targetPort }}
                 ;} &> /tmp/init.log"]
+        livenessProbe:
+          failureThreshold: 4
+          httpGet:
+            path: /
+            port: {{ .Values.service.targetPort }}
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 4
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /
+            port: {{ .Values.service.targetPort }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 2
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1900Mi
+          requests:
+            cpu: 200m
+            memory: 1900Mi
       initContainers:
       - name: prepare-data-volume
         image: alpine:latest
