@@ -13,7 +13,7 @@ spec:
     - "{{ .Values.hostname }}.{{ .Values.dnsDomain }}"
     secretName: {{ .Values.ingress.tls.secretName }}
   rules:
-  - host: {{ .Values.fqdn }}
+  - host: "{{ .Values.hostname }}.{{ .Values.dnsDomain }}"
     http:
       paths:
       - backend:
