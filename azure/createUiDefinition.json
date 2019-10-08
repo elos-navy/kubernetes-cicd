@@ -70,8 +70,8 @@
                 "label": "Auxiliary VM",
                 "bladeTitle": "Auxiliary VM setup",
                 "subLabel": {
-                  "preValidation": "Add helper VM (AuxVM) deployment size and public SSH key.",
-                  "postValidation": "AuxVM set."
+                  "preValidation": "Helper VM (AuxVM) size and SSH access key.",
+                  "postValidation": "AuxVM parameters setup is OK."
                 },
                 "elements": [
                     {
@@ -112,8 +112,8 @@
                 "label": "Kubernetes Cluster",
                 "bladeTitle": "Kubernetes Cluster setup",
                 "subLabel": {
-                  "preValidation": "Setup a cluster to power the whole CICD framework.",
-                  "postValidation": "Cluster configuration set."
+                  "preValidation": "Kubernetes cluster.",
+                  "postValidation": "Kubernetes cluster setup is OK."
                 },
                 "elements": [
                     {
@@ -153,8 +153,8 @@
                 "label": "Jenkins",
                 "bladeTitle": "Jenkins automation server initial access",
                 "subLabel": {
-                  "preValidation": "Set a password for the Jenkins sitting at heart of the framework.",
-                  "postValidation": "Jenkins password set."
+                  "preValidation": "Jenkins service password.",
+                  "postValidation": "Jenkins password setup is OK."
                 },
                 "elements": [
                     {
@@ -180,10 +180,10 @@
             {
                 "name": "Application",
                 "label": "Application",
-                "bladeTitle": "Sample app to build?",
+                "bladeTitle": "Sample application to build",
                 "subLabel": {
-                  "preValidation": "Application GIT repository URL",
-                  "postValidation": "GIT repository set"
+                  "preValidation": "Application GIT repository URL.",
+                  "postValidation": "Application GIT repository setup is OK."
                 },
                 "elements": [
                     {
