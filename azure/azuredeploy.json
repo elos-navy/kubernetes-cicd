@@ -2,6 +2,13 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
     "gitBranch": {
       "type": "string",
       "defaultValue": "master",
@@ -105,7 +112,7 @@
     }
   },
   "variables": {
-    "location": "[resourceGroup().location]",
+    "location": "[parameters('location')]",
     "adminUsername": "azureuser",
     "acrAdminUserEnabled": true,
     "acrName": "[concat('acr',uniqueString(resourceGroup().id))]",
@@ -124,7 +131,7 @@
   "resources": [
     {
       "apiVersion": "2018-02-01",
-      "name": "pid-5e1936a5-6796-4c94-8566-56097c106730",
+      "name": "pid-4630972a-5ac5-5915-8130-b5fd5e7145e9",
       "type": "Microsoft.Resources/deployments",
       "properties": {
         "mode": "Incremental",
