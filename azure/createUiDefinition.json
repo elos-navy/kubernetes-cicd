@@ -75,16 +75,17 @@
                 },
                 "elements": [
                     {
-                        "name": "sshPublicKey",
+                        "name": "vmSshPublicKey",
                         "type": "Microsoft.Compute.CredentialsCombo",
                         "label": {
-                            "sshPublicKey": "SSH key for AuxVM",
+                            "sshPublicKey": "Public SSH key",
                             "authenticationType": "",
                             "confirmPassword": "",
                             "password": ""
                         },
                         "constraints": {
-                            "required": true
+                            "required": true,
+                            "customValidationMessage":"Please use the correct SSH public key format. You can find examples [here](https://www.ietf.org/rfc/rfc4716.txt)"
                         },
                         "options": {
                             "hideConfirmation": false,
@@ -208,7 +209,7 @@
             "acrSku": "[basics('acrSku')]",
             "jenkinsAdminPassword": "[steps('Jenkins').jenkinsAdminPassword]",
             "applicationGitUrl": "[steps('Application').applicationGitUrl]",
-            "auxvmSshPublicKey": "[steps('AuxVM').sshPublicKey]",
+            "auxvmSshPublicKey": "[steps('AuxVM').vmSshPublicKey.sshPublicKey]",
             "auxvmSize": "[steps('AuxVM').vmSize]",
             "kubernetesVersion": "[steps('K8sClusterConfig').kubernetesVersion]",
             "kubernetesNodeSize": "[steps('K8sClusterConfig').nodeSize]"
