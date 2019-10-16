@@ -1,47 +1,55 @@
 #!/bin/bash -x
 
-CLUSTER_NAME='ls-auth-testing'
+CLUSTER_NAME='ls-jenkins-authentication'
 RESOURCE_GROUP=$CLUSTER_NAME
-CLUSTER_LOCATION='westeurope'
+#CLUSTER_LOCATION='westeurope'
 
-function create_server_registration {
+#
+# TODO vytvorenie enterprise application cez CLI - aby bolo mozne riadit
+# pristup z AD. Je to mozne cez CLI?
+# - https://social.msdn.microsoft.com/Forums/azure/en-US/b9f8fd47-14f3-49fa-9f0f-d6c0493f8821/create-an-enterprise-application-from-azure-cli-20?forum=WindowsAzureAD
+#
+
+function create_app_registration {
  
   # Create the Azure AD application
-  SERVER_APP_ID=$(az ad app create \
-    --display-name "${CLUSTER_NAME}-server" \
-    --identifier-uris "https://${CLUSTER_NAME}-server" \
+  APP_ID=$(az ad app create \
+    --display-name "${CLUSTER_NAME}-app" \
+    --oauth2-allow-implicit-flow true \
+    --reply-urls "https://blabla/securityRealm/finishLogin"\
+    --identifier-uris "https://blabla/securityRealm/finishLogin" \
     --query appId \
     -o tsv)
   
   # Update the application group memebership claims
-  az ad app update \
-    --id $SERVER_APP_ID \
-    --set groupMembershipClaims=All
+  #az ad app update \
+  #  --id $SERVER_APP_ID \
+  #  --set groupMembershipClaims=All
   
   # Create a service principal for the Azure AD application
-  az ad sp create --id $SERVER_APP_ID
+  #az ad sp create --id $SERVER_APP_ID
   
   # Get the service principal secret
-  SERVER_APP_SECRET=$(az ad sp credential reset \
-    --name $SERVER_APP_ID \
-    --credential-description "AKSPassword" \
-    --query password \
-    -o tsv)
+  #SERVER_APP_SECRET=$(az ad sp credential reset \
+  #  --name $SERVER_APP_ID \
+  #  --credential-description "AKSPassword" \
+  #  --query password \
+  #  -o tsv)
   
-  az ad app permission add \
-    --id $SERVER_APP_ID \
-    --api 00000003-0000-0000-c000-000000000000 \
-    --api-permissions \
-        e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope \
-        06da0dbc-49e2-44d2-8312-53f166ab848a=Scope \
-        7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role
+  #az ad app permission add \
+  #  --id $SERVER_APP_ID \
+  #  --api 00000003-0000-0000-c000-000000000000 \
+  #  --api-permissions \
+  #      e1fe6dd8-ba31-4d61-89e7-88639da4683d=Scope \
+  #      06da0dbc-49e2-44d2-8312-53f166ab848a=Scope \
+  #      7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role
   
-  az ad app permission grant \
-    --id $SERVER_APP_ID \
-    --api 00000003-0000-0000-c000-000000000000
+  #az ad app permission grant \
+  #  --id $SERVER_APP_ID \
+  #  --api 00000003-0000-0000-c000-000000000000
   
-  az ad app permission admin-consent \
-    --id $SERVER_APP_ID
+  #az ad app permission admin-consent \
+  #  --id $SERVER_APP_ID
 }
 
 function create_client_registration {
@@ -111,12 +119,14 @@ EOF
 }
 
 function cleanup {
-  az ad app delete --id "https://${CLUSTER_NAME}-server"
-  az ad app delete --id "https://${CLUSTER_NAME}-client"
+  #az ad app delete --id "https://${CLUSTER_NAME}-server"
+  #az ad app delete --id "https://${CLUSTER_NAME}-client"
 
-  az aks delete --yes \
-    --resource-group $RESOURCE_GROUP \
-    --name $CLUSTER_NAME
+  #az aks delete --yes \
+  #  --resource-group $RESOURCE_GROUP \
+  #  --name $CLUSTER_NAME
+
+  az ad app delete --id "https://blabla/securityRealm/finishLogin"
 }
 
 
@@ -130,4 +140,7 @@ function cleanup {
 #  --name $CLUSTER_NAME \
 #  --overwrite-existing
 
-cleanup
+#cleanup
+
+create_app_registration
+
