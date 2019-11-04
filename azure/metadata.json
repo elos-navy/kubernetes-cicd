@@ -6,7 +6,7 @@
     "description": "This template allows you to do zero-downtime deployment to AKS Kubernetes cluster with auxvm. It deploys an instance of auxvm on a Linux Ubuntu 16.04 LTS VM and an Azure Kubernetes Service (AKS).",
     "summary": "This template deploys a auxvm instance and an Azure Kubernetes Service (AKS).",
     "githubUsername": "azure-devops",
-    "dateUpdated": "2018-02-06"
+    "dateUpdated": "2019-11-04"
 }
 
 
