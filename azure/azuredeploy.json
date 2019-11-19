@@ -46,8 +46,10 @@
     },
     "kubernetesVersion": {
       "type": "string",
-      "defaultValue": "1.13.10",
+      "defaultValue": "1.14.8",
       "allowedValues": [
+        "1.15.5", 
+        "1.14.8",
         "1.13.10"
       ],
       "metadata": {
@@ -279,10 +281,15 @@
       "value": "[concat('https://application-prod.', reference(variables('bootstrapExtensionName')).outputs.instanceView.value)]",
       "type": "string"
     },
-    "Auxvm ssh": {
+    "Auxvm ssh connection command": {
       "type": "string",
       "value": "[concat('ssh ', variables('adminUsername'), '@', reference(variables('auxvmDeploymentName')).outputs.auxvmFqdn.value)]"
     },
+    "Authenticate kubectl tool via az CLI": {
+      "type": "string",
+      "value": "[concat('az aks get-credentials --resource-group ', resourceGroup().name, ' --name ', variables('aksName'), ' --admin')]"
+    },
+    
     "Kubernetes master fqdn": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))).fqdn]"
