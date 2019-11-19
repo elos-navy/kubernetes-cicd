@@ -199,6 +199,14 @@ data:
     def nexus_admin_password = &apos;admin123&apos;
     
     node {
+  stage(&apos;Update kubectl tool&apos;) {
+        sh &quot;kubectl version&quot;
+        sh &quot;curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl&quot;
+        sh &quot;chmod +x kubectl&quot;
+        sh &quot;mv kubectl `which kubectl`&quot;
+        sh &quot;kubectl version&quot;
+      }
+      
       stage(&apos;Cleanup&apos;) {
         delete_namespace(components_namespace)
         delete_namespace(app_dev_namespace)
